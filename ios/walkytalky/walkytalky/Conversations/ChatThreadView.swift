@@ -348,7 +348,7 @@ private struct MessageBubble: View {
 
             case .image, .gif:
                 VStack(alignment: .leading, spacing: 2) {
-                    MediaMessageView(message: message, conversationId: conversationId, allowSave: !isMine)
+                    MediaMessageView(message: message, conversationId: conversationId)
                     Text(timeText)
                         .font(.caption2)
                         .foregroundStyle(.secondary)

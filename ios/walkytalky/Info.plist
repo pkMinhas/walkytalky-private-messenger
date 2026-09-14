@@ -24,8 +24,6 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>walkytalky uses the camera to scan pairing QR codes and to take photos to send in chats.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>walkytalky saves photos you choose to keep from your chats to your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -224,13 +224,13 @@ Added 3 tests: downscale preserves aspect ratio (7680×3840 → 3840×1920), sma
 
 ## Phase 7 — Save to Gallery
 
-- [x] Add Save button/icon on received media bubbles — `Media/MediaMessageView.swift`, overlaid bottom-trailing on the image, only for `allowSave` (i.e. `!isMine`, wired from `ChatThreadView`) per the task's "received" scoping
-- [x] Request `Photos` write permission on first save attempt (not upfront) — `Media/GallerySaver.swift`, `PHPhotoLibrary.requestAuthorization(for: .addOnly)` called lazily inside `save(_:)`, nowhere earlier
-- [x] `[HUMAN]` Add `NSPhotoLibraryAddUsageDescription` string to Info.plist — confirm wording — added a default string to `Info.plist` so the feature doesn't crash on first use; please confirm the exact wording (same as the camera string from Phase 4)
-- [x] Write decrypted plaintext to system Photo Library via `PHPhotoLibrary` — `GallerySaver.save`, `PHAssetChangeRequest.creationRequestForAsset(from:)`
-- [x] Show success/failure feedback (checkmark/toast) — button swaps to a checkmark on success; failure surfaces as an alert with the underlying error (e.g. permission denied)
+- [x] ~~Add Save button/icon on received media bubbles~~ — **superseded 2026-09-14, see below**
+- [x] ~~Request `Photos` write permission on first save attempt (not upfront)~~ — superseded
+- [x] ~~`[HUMAN]` Add `NSPhotoLibraryAddUsageDescription` string to Info.plist~~ — superseded, key removed (nothing calls `PHPhotoLibrary` directly anymore)
+- [x] ~~Write decrypted plaintext to system Photo Library via `PHPhotoLibrary`~~ — superseded
+- [x] ~~Show success/failure feedback (checkmark/toast)~~ — superseded
 
-**Verified so far:** `xcodebuild` build succeeds cleanly. Not exercisable end-to-end yet — needs a real decrypted image on screen first, which is blocked on the same chain as Phases 5/6.
+**2026-09-14 — Consolidated into the fullscreen viewer's share sheet, at the user's request.** The original design put a standalone save button directly on each thumbnail (`Media/GallerySaver.swift`, explicit `PHPhotoLibrary` calls). Once the fullscreen image viewer (Phase 10) gained a proper Share button, that became redundant — the system share sheet's own "Save Image" action covers the exact same outcome. Removed the bubble-level save button and its `allowSave` plumbing from `MediaMessageView`/`ChatThreadView`, and deleted `GallerySaver.swift` entirely once it had zero remaining callers, along with the now-unused `NSPhotoLibraryAddUsageDescription` Info.plist key (the share sheet's save action is a system UI, not a `PHPhotoLibrary` call this app makes, so no privacy string is needed for it). Net effect: one save/share mechanism instead of two, and it now works for the viewer's own sent photos too, not just received ones (the old button was received-only per the original task wording; the share sheet has no such asymmetry). See Phase 10's update for the viewer changes themselves.
 
 ---
 
@@ -280,6 +280,14 @@ Added 3 tests: downscale preserves aspect ratio (7680×3840 → 3840×1920), sma
 Fixed by making it a real live listener, one per conversation, started from the same `onAppear` call site (now `startListening` instead of `refresh`, safe to call repeatedly — a no-op once that conversation's listener exists) and kept alive for the app session rather than torn down per row. A personal chat app's conversation count is small enough that N small listeners is negligible overhead, and that's what makes the preview genuinely live.
 
 Full suite still green (28/28). No Firebase deploy needed — purely a client-side listener-lifecycle change, no rules touched.
+
+### 2026-09-14 — Fullscreen viewer: added pan and a share button, retired the bubble save button
+
+At the user's request: `FullscreenImageViewer` now supports drag-to-pan while zoomed in (previously pinch-to-zoom only, no way to look around once zoomed past the frame), and a Share button next to the existing Close button, top of screen — `ShareLink` handing the decrypted `UIImage` to the system share sheet (AirDrop, Messages, Save Image, etc.).
+
+Once that existed, the standalone save button on each thumbnail (Phase 7) became redundant, so per the user's explicit follow-up instruction it's gone — see Phase 7's entry above for the full removal (deleted `GallerySaver.swift`, the `allowSave` plumbing, and the now-unused `NSPhotoLibraryAddUsageDescription` Info.plist key).
+
+Full suite still green (31/31). No Firebase deploy needed.
 
 ---
 
