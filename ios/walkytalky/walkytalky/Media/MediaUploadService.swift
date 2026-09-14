@@ -16,13 +16,19 @@ final class MediaUploadService: ObservableObject {
     private let db = Firestore.firestore()
     private let storage = Storage.storage()
 
-    /// EXIF/GPS-strip -> encrypt -> upload to Storage -> write the Firestore
-    /// message doc, in that order (stripping happens before any other
-    /// processing, per the task list).
+    /// EXIF/GPS-strip (+ resize/reformat for non-GIF images) -> encrypt ->
+    /// upload to Storage -> write the Firestore message doc, in that order
+    /// (stripping happens before any other processing, per the task list).
     func send(imageData: Data, type: MessageType, conversationId: String, senderId: String) async {
         state = .uploading(progress: 0)
 
-        guard let stripped = ImageSanitizer.stripMetadata(from: imageData) else {
+        // GIFs go through plain metadata-stripping only — converting one to
+        // JPEG would destroy the animation. Static images additionally get
+        // downscaled to fit 4K and normalized to JPEG @ 95%.
+        let prepared = type == .image
+            ? ImageSanitizer.prepareImageForUpload(imageData)
+            : ImageSanitizer.stripMetadata(from: imageData)
+        guard let stripped = prepared else {
             state = .failed("Couldn't process this image.")
             return
         }

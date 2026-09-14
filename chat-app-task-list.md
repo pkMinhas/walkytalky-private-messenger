@@ -102,6 +102,8 @@ Two related additions at the user's request, on top of the anonymous-auth pivot 
 
 **Verified:** full unit test suite green after each iteration (23/23), clean rules compile on each deploy, both UI tests still pass. Not yet exercised: an actual admin-set `displayId` rendering in the app (needs the `[HUMAN]` admin step of creating one in the console — same blocker as conversations themselves).
 
+**2026-09-14 follow-up — real bug, caught by the user:** the data model and rules were already correctly scoped per-conversation, but `ParticipantDirectory`'s in-memory cache wasn't — it was keyed by uid alone (`displayIdsByUid: [String: String]`). Since an admin can set a *different* `displayId` for the same uid in different conversations (that's the whole point of nesting the doc under the conversation), the uid-only cache would resolve a name once for whichever conversation asked first, then silently reuse that same name for that uid everywhere else it appeared, ignoring the per-conversation scoping entirely. Fixed by keying the cache on `(conversationId, uid)` instead — `displayName(for:in:)` and `resolve(_:in:)` both now require the conversation id, not just the uid. Both call sites (`ChatListView` row title, `ChatThreadView` nav title) updated to pass `conversation.id`. Full suite still green (31/31) — this class of bug isn't unit-testable in isolation (same as `ConversationsService`/`MessagesService`/`LastMessageDirectory`, it's a live-Firestore-backed cache), verified by code review instead.
+
 ### 2026-09-14 — Text messages are now encrypted (user flagged this as a real gap)
 
 Phase 3's original task explicitly said "plaintext text message send/receive," and that's what got built — only media (Phase 5/6) was ever scoped for AES-256-GCM encryption. The user correctly called this out as a real gap for a "secure chat" app once the pairing/key infrastructure existed to fix it, so text now goes through the same encryption path as media:
@@ -196,6 +198,14 @@ Root cause: `ImageSanitizer.stripMetadata` decoded via `CGImageSourceCreateImage
 Fix: `ImageSanitizer.stripMetadata` now decodes through `UIImage(data:)` first (which *does* correctly read the EXIF orientation into `.imageOrientation`) and bakes that orientation into the pixel buffer via a redraw before handing off to the same strip-and-reencode path — so by the time metadata gets dropped, the pixels are already correctly oriented and don't need the tag anymore. No-op (just returns `.cgImage` directly) for already-upright images, so this doesn't add redraw overhead for the common case.
 
 Added `ImageSanitizerTests.stripMetadataBakesInOrientationInsteadOfDroppingIt`, which constructs the exact failure scenario directly — an 8×4 image with unrotated pixels tagged EXIF orientation 6 ("rotate 90° CW") — and confirms the *old* code would have kept it 8×4 (tag dropped, still sideways) while the fix correctly produces 4×8 (rotation baked into the pixels). Full suite green (28/28).
+
+### 2026-09-14 — Added: resize + reformat non-GIF images before upload
+
+At the user's request: non-GIF images are now downscaled to fit a 3840px long edge (4K UHD's long edge — the common meaning of "4K" for a photo, which unlike video isn't fixed at 16:9; **flagging this specific number as a judgment call**, not stated anywhere in the task list) before encryption, aspect ratio preserved, never upscaling a smaller image. Also always re-encoded as JPEG at 95% quality regardless of the original format (HEIC, PNG, etc.).
+
+`ImageSanitizer.prepareImageForUpload(_:)` does this in one redraw pass — decode, respect `imageOrientation` (reusing the same orientation-correctness fix from the entry above), scale to the target size, and JPEG-encode — rather than resizing and then separately re-stripping/re-encoding, which would have compounded lossy JPEG passes. `MediaUploadService.send` now branches on message type: `.image` goes through this new path, `.gif` keeps using the original `stripMetadata` (converting a GIF to JPEG would destroy the animation, and resizing wasn't asked for GIFs either).
+
+Added 3 tests: downscale preserves aspect ratio (7680×3840 → 3840×1920), small images aren't upscaled, output is genuinely JPEG regardless of input container format. Full suite green (31/31).
 
 ---
 

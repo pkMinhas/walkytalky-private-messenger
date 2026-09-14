@@ -12,26 +12,37 @@ import Foundation
 /// set, falls back to the uid's first and last characters.
 @MainActor
 final class ParticipantDirectory: ObservableObject {
-    @Published private(set) var displayIdsByUid: [String: String] = [:]
+    /// A display name is genuinely per-conversation, not a global identity
+    /// for a uid — an admin can set a different displayId for the same
+    /// person in different conversations, matching where the data actually
+    /// lives. Caching by uid alone would let a name resolved in one
+    /// conversation silently leak into another.
+    private struct Key: Hashable {
+        let conversationId: String
+        let uid: String
+    }
+
+    @Published private var displayIdsByKey: [Key: String] = [:]
 
     private let db = Firestore.firestore()
-    private var inFlight: Set<String> = []
+    private var inFlight: Set<Key> = []
 
-    func displayName(for uid: String) -> String {
-        displayIdsByUid[uid] ?? fallback(for: uid)
+    func displayName(for uid: String, in conversationId: String) -> String {
+        displayIdsByKey[Key(conversationId: conversationId, uid: uid)] ?? fallback(for: uid)
     }
 
     func resolve(_ uid: String, in conversationId: String) {
-        guard displayIdsByUid[uid] == nil, !inFlight.contains(uid) else { return }
-        inFlight.insert(uid)
+        let key = Key(conversationId: conversationId, uid: uid)
+        guard displayIdsByKey[key] == nil, !inFlight.contains(key) else { return }
+        inFlight.insert(key)
         Task {
-            defer { inFlight.remove(uid) }
+            defer { inFlight.remove(key) }
             guard let snapshot = try? await db.collection("conversations").document(conversationId)
                 .collection("displaynames").document(uid).getDocument(),
                   let displayId = snapshot.data()?["displayId"] as? String,
                   !displayId.isEmpty
             else { return }
-            displayIdsByUid[uid] = displayId
+            displayIdsByKey[key] = displayId
         }
     }
 

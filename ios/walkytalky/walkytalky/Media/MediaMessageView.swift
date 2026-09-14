@@ -125,7 +125,7 @@ struct MediaMessageView: View {
                 case .saved:
                     Image(systemName: "checkmark.circle.fill")
                 default:
-                    Image(systemName: "square.and.arrow.down.circle.fill")
+                    Image(systemName: "square.and.arrow.down.fill")
                 }
             }
             .font(.system(size: 22))

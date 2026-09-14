@@ -140,7 +140,7 @@ struct ChatThreadView: View {
         } message: {
             Text(sendErrorMessage ?? "")
         }
-        .navigationTitle(otherUid.map { directory.displayName(for: $0) } ?? "Conversation")
+        .navigationTitle(otherUid.map { directory.displayName(for: $0, in: conversation.id ?? "") } ?? "Conversation")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

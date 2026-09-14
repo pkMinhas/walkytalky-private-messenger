@@ -3,6 +3,44 @@ import UIKit
 import UniformTypeIdentifiers
 
 enum ImageSanitizer {
+    /// 4K UHD's long edge — the common meaning of "4K" for a photo (which,
+    /// unlike video, isn't fixed at 16:9). Only ever downscales; a smaller
+    /// image is left at its original size.
+    static let maxUploadDimension: CGFloat = 3840
+    static let uploadJPEGQuality: CGFloat = 0.95
+
+    /// Full prep pipeline for a non-GIF image message before encryption:
+    /// normalize orientation, downscale to fit within `maxUploadDimension`
+    /// (aspect ratio preserved, never upscaled), and encode as JPEG at
+    /// `uploadJPEGQuality` — all in one redraw pass, so resizing doesn't
+    /// compound with a separate lossy re-encode. GIFs skip this entirely
+    /// (see `stripMetadata` below) since converting one to JPEG would
+    /// destroy it.
+    static func prepareImageForUpload(_ data: Data) -> Data? {
+        guard let sourceImage = UIImage(data: data) else { return nil }
+        let targetSize = scaledSize(for: sourceImage.size, maxDimension: maxUploadDimension)
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1 // work in actual pixels, not points
+        format.opaque = true // JPEG has no alpha channel
+        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
+        // `.draw(in:)` respects `imageOrientation` and scales to the
+        // target rect in the same pass; the freshly rendered bitmap has no
+        // attached metadata, so this also satisfies the "strip metadata"
+        // requirement without a separate CGImageSource/Destination step.
+        let normalized = renderer.image { _ in
+            sourceImage.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+        return normalized.jpegData(compressionQuality: uploadJPEGQuality)
+    }
+
+    private static func scaledSize(for size: CGSize, maxDimension: CGFloat) -> CGSize {
+        let longerEdge = max(size.width, size.height)
+        guard longerEdge > maxDimension else { return size }
+        let scale = maxDimension / longerEdge
+        return CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
+    }
+
     /// Re-encodes image data with all metadata (EXIF, GPS, etc.) stripped.
     /// Decoding to a `CGImage` first (rather than
     /// `CGImageDestinationAddImageFromSource`, which would carry the

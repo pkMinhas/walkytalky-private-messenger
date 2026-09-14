@@ -168,6 +168,49 @@ struct ImageSanitizerTests {
         #expect(afterImage.width == 4)
         #expect(afterImage.height == 8)
     }
+
+    private func solidJPEGData(width: Int, height: Int) -> Data {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
+        let image = renderer.image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        }
+        return image.jpegData(compressionQuality: 1.0)!
+    }
+
+    @Test func prepareImageForUploadDownscalesOversizedImagesPreservingAspectRatio() throws {
+        // 2:1 aspect ratio, well over the 3840 cap on the long edge.
+        let original = solidJPEGData(width: 7680, height: 3840)
+        let prepared = try #require(ImageSanitizer.prepareImageForUpload(original))
+
+        let source = try #require(CGImageSourceCreateWithData(prepared as CFData, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+
+        #expect(image.width == 3840)
+        #expect(image.height == 1920) // aspect ratio preserved: 2:1
+    }
+
+    @Test func prepareImageForUploadDoesNotUpscaleSmallImages() throws {
+        let original = solidJPEGData(width: 100, height: 50)
+        let prepared = try #require(ImageSanitizer.prepareImageForUpload(original))
+
+        let source = try #require(CGImageSourceCreateWithData(prepared as CFData, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+
+        #expect(image.width == 100)
+        #expect(image.height == 50)
+    }
+
+    @Test func prepareImageForUploadProducesJPEG() throws {
+        let original = solidJPEGData(width: 100, height: 100)
+        let prepared = try #require(ImageSanitizer.prepareImageForUpload(original))
+
+        let source = try #require(CGImageSourceCreateWithData(prepared as CFData, nil))
+        let type = CGImageSourceGetType(source) as String?
+        #expect(type == UTType.jpeg.identifier)
+    }
 }
 
 @MainActor

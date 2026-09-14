@@ -106,7 +106,7 @@ private struct ConversationRow: View {
 
     private var title: String {
         guard let otherUid else { return "Conversation" }
-        return directory.displayName(for: otherUid)
+        return directory.displayName(for: otherUid, in: conversation.id ?? "")
     }
 
     private var preview: String {
