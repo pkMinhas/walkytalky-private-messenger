@@ -1,0 +1,100 @@
+//
+//  PasscodeTests.swift
+//  walkytalkyTests
+//
+
+import Foundation
+import Testing
+@testable import walkytalky
+
+struct PBKDF2Tests {
+    @Test func sameInputsProduceSameHash() {
+        let salt = PBKDF2.randomSalt()
+        let a = PBKDF2.hash(password: "123456", salt: salt)
+        let b = PBKDF2.hash(password: "123456", salt: salt)
+        #expect(a == b)
+        #expect(a.count == PBKDF2.keyLength)
+    }
+
+    @Test func differentSaltsProduceDifferentHashes() {
+        let saltA = PBKDF2.randomSalt()
+        let saltB = PBKDF2.randomSalt()
+        #expect(saltA != saltB)
+        let hashA = PBKDF2.hash(password: "123456", salt: saltA)
+        let hashB = PBKDF2.hash(password: "123456", salt: saltB)
+        #expect(hashA != hashB)
+    }
+
+    @Test func differentPasswordsProduceDifferentHashes() {
+        let salt = PBKDF2.randomSalt()
+        let hashA = PBKDF2.hash(password: "123456", salt: salt)
+        let hashB = PBKDF2.hash(password: "654321", salt: salt)
+        #expect(hashA != hashB)
+    }
+
+    @Test func constantTimeEqualsMatchesRegularEquality() {
+        let salt = PBKDF2.randomSalt()
+        let hash = PBKDF2.hash(password: "123456", salt: salt)
+        #expect(PBKDF2.constantTimeEquals(hash, hash))
+        #expect(!PBKDF2.constantTimeEquals(hash, Data(hash.reversed())))
+        #expect(!PBKDF2.constantTimeEquals(hash, Data([0x01])))
+    }
+}
+
+@MainActor
+@Suite(.serialized)
+struct PasscodeServiceTests {
+    /// PasscodeService reads/writes fixed Keychain account names, so tests
+    /// share device Keychain state — clear it before each test for isolation,
+    /// and force serial execution (Swift Testing parallelizes by default)
+    /// since concurrent tests would otherwise stomp each other's state.
+    private func freshService() -> PasscodeService {
+        for account in ["passcodeHash", "passcodeSalt", "passcodeFailedAttempts", "passcodeLockoutUntil"] {
+            KeychainService.delete(account: account)
+        }
+        return PasscodeService()
+    }
+
+    @Test func startsWithNoPasscode() {
+        let service = freshService()
+        #expect(service.hasPasscode == false)
+    }
+
+    @Test func setThenVerifyCorrectPasscodeSucceeds() {
+        let service = freshService()
+        service.setPasscode("123456")
+        #expect(service.hasPasscode)
+        #expect(service.isLocked == false)
+        #expect(service.verify("123456"))
+    }
+
+    @Test func verifyWrongPasscodeFailsAndStartsLockout() {
+        let service = freshService()
+        service.setPasscode("123456")
+        #expect(service.verify("000000") == false)
+        // First failure uses lockoutDelays[0] == 5s.
+        #expect(service.isLockedOut)
+        #expect(service.lockoutRemaining > 0 && service.lockoutRemaining <= 5)
+    }
+
+    @Test func lockoutBlocksFurtherAttemptsWithoutCountingThem() {
+        let service = freshService()
+        service.setPasscode("123456")
+        _ = service.verify("000000") // 1st failure -> locked out ~5s
+        #expect(service.isLockedOut)
+        // Even the *correct* passcode is rejected while locked out.
+        #expect(service.verify("123456") == false)
+    }
+
+    @Test func successfulUnlockResetsTheDelayCurve() async {
+        let service = freshService()
+        service.setPasscode("123456")
+        _ = service.verify("000000") // 1st failure: ~5s lockout
+        // Wait out the short first-tier lockout so we can unlock and re-check the curve.
+        try? await Task.sleep(for: .seconds(6))
+        #expect(service.isLockedOut == false)
+        #expect(service.verify("123456")) // resets failed-attempt counter
+        #expect(service.verify("000000") == false) // next failure should be back at tier 1 (~5s), not tier 2 (~30s)
+        #expect(service.lockoutRemaining <= 5)
+    }
+}

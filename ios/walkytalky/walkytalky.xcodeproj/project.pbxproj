@@ -1,0 +1,619 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		335D1CB7305441ED0028E0D3 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 335D1CB6305441ED0028E0D3 /* FirebaseAuth */; };
+		335D1CB9305441ED0028E0D3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 335D1CB8305441ED0028E0D3 /* FirebaseFirestore */; };
+		335D1CBB305441ED0028E0D3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 335D1CBA305441ED0028E0D3 /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		335D1C993054285E0028E0D3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 335D1C833054285D0028E0D3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 335D1C8A3054285D0028E0D3;
+			remoteInfo = walkytalky;
+		};
+		335D1CA33054285E0028E0D3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 335D1C833054285D0028E0D3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 335D1C8A3054285D0028E0D3;
+			remoteInfo = walkytalky;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		335D1C8B3054285D0028E0D3 /* walkytalky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = walkytalky.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		335D1C983054285E0028E0D3 /* walkytalkyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = walkytalkyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		335D1CA23054285E0028E0D3 /* walkytalkyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = walkytalkyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		335D1C8D3054285D0028E0D3 /* walkytalky */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = walkytalky;
+			sourceTree = "<group>";
+		};
+		335D1C9B3054285E0028E0D3 /* walkytalkyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = walkytalkyTests;
+			sourceTree = "<group>";
+		};
+		335D1CA53054285E0028E0D3 /* walkytalkyUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = walkytalkyUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		335D1C883054285D0028E0D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				335D1CB7305441ED0028E0D3 /* FirebaseAuth in Frameworks */,
+				335D1CB9305441ED0028E0D3 /* FirebaseFirestore in Frameworks */,
+				335D1CBB305441ED0028E0D3 /* FirebaseStorage in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335D1C953054285E0028E0D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335D1C9F3054285E0028E0D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		335D1C823054285D0028E0D3 = {
+			isa = PBXGroup;
+			children = (
+				335D1C8D3054285D0028E0D3 /* walkytalky */,
+				335D1C9B3054285E0028E0D3 /* walkytalkyTests */,
+				335D1CA53054285E0028E0D3 /* walkytalkyUITests */,
+				335D1C8C3054285D0028E0D3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		335D1C8C3054285D0028E0D3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				335D1C8B3054285D0028E0D3 /* walkytalky.app */,
+				335D1C983054285E0028E0D3 /* walkytalkyTests.xctest */,
+				335D1CA23054285E0028E0D3 /* walkytalkyUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		335D1C8A3054285D0028E0D3 /* walkytalky */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 335D1CAC3054285E0028E0D3 /* Build configuration list for PBXNativeTarget "walkytalky" */;
+			buildPhases = (
+				335D1C873054285D0028E0D3 /* Sources */,
+				335D1C883054285D0028E0D3 /* Frameworks */,
+				335D1C893054285D0028E0D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				335D1C8D3054285D0028E0D3 /* walkytalky */,
+			);
+			name = walkytalky;
+			packageProductDependencies = (
+				335D1CB6305441ED0028E0D3 /* FirebaseAuth */,
+				335D1CB8305441ED0028E0D3 /* FirebaseFirestore */,
+				335D1CBA305441ED0028E0D3 /* FirebaseStorage */,
+			);
+			productName = walkytalky;
+			productReference = 335D1C8B3054285D0028E0D3 /* walkytalky.app */;
+			productType = "com.apple.product-type.application";
+		};
+		335D1C973054285E0028E0D3 /* walkytalkyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 335D1CAF3054285E0028E0D3 /* Build configuration list for PBXNativeTarget "walkytalkyTests" */;
+			buildPhases = (
+				335D1C943054285E0028E0D3 /* Sources */,
+				335D1C953054285E0028E0D3 /* Frameworks */,
+				335D1C963054285E0028E0D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				335D1C9A3054285E0028E0D3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				335D1C9B3054285E0028E0D3 /* walkytalkyTests */,
+			);
+			name = walkytalkyTests;
+			packageProductDependencies = (
+			);
+			productName = walkytalkyTests;
+			productReference = 335D1C983054285E0028E0D3 /* walkytalkyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		335D1CA13054285E0028E0D3 /* walkytalkyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 335D1CB23054285E0028E0D3 /* Build configuration list for PBXNativeTarget "walkytalkyUITests" */;
+			buildPhases = (
+				335D1C9E3054285E0028E0D3 /* Sources */,
+				335D1C9F3054285E0028E0D3 /* Frameworks */,
+				335D1CA03054285E0028E0D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				335D1CA43054285E0028E0D3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				335D1CA53054285E0028E0D3 /* walkytalkyUITests */,
+			);
+			name = walkytalkyUITests;
+			packageProductDependencies = (
+			);
+			productName = walkytalkyUITests;
+			productReference = 335D1CA23054285E0028E0D3 /* walkytalkyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		335D1C833054285D0028E0D3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					335D1C8A3054285D0028E0D3 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					335D1C973054285E0028E0D3 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 335D1C8A3054285D0028E0D3;
+					};
+					335D1CA13054285E0028E0D3 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 335D1C8A3054285D0028E0D3;
+					};
+				};
+			};
+			buildConfigurationList = 335D1C863054285D0028E0D3 /* Build configuration list for PBXProject "walkytalky" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 335D1C823054285D0028E0D3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				335D1CB5305441ED0028E0D3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 335D1C8C3054285D0028E0D3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				335D1C8A3054285D0028E0D3 /* walkytalky */,
+				335D1C973054285E0028E0D3 /* walkytalkyTests */,
+				335D1CA13054285E0028E0D3 /* walkytalkyUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		335D1C893054285D0028E0D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335D1C963054285E0028E0D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335D1CA03054285E0028E0D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		335D1C873054285D0028E0D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335D1C943054285E0028E0D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335D1C9E3054285E0028E0D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		335D1C9A3054285E0028E0D3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 335D1C8A3054285D0028E0D3 /* walkytalky */;
+			targetProxy = 335D1C993054285E0028E0D3 /* PBXContainerItemProxy */;
+		};
+		335D1CA43054285E0028E0D3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 335D1C8A3054285D0028E0D3 /* walkytalky */;
+			targetProxy = 335D1CA33054285E0028E0D3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		335D1CAA3054285E0028E0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		335D1CAB3054285E0028E0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		335D1CAD3054285E0028E0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.withpreet.walkytalky;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		335D1CAE3054285E0028E0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.withpreet.walkytalky;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		335D1CB03054285E0028E0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.withpreet.walkytalkyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/walkytalky.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/walkytalky";
+			};
+			name = Debug;
+		};
+		335D1CB13054285E0028E0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.withpreet.walkytalkyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/walkytalky.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/walkytalky";
+			};
+			name = Release;
+		};
+		335D1CB33054285E0028E0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.withpreet.walkytalkyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = walkytalky;
+			};
+			name = Debug;
+		};
+		335D1CB43054285E0028E0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LB2U4476V3;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.withpreet.walkytalkyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = walkytalky;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		335D1C863054285D0028E0D3 /* Build configuration list for PBXProject "walkytalky" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				335D1CAA3054285E0028E0D3 /* Debug */,
+				335D1CAB3054285E0028E0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		335D1CAC3054285E0028E0D3 /* Build configuration list for PBXNativeTarget "walkytalky" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				335D1CAD3054285E0028E0D3 /* Debug */,
+				335D1CAE3054285E0028E0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		335D1CAF3054285E0028E0D3 /* Build configuration list for PBXNativeTarget "walkytalkyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				335D1CB03054285E0028E0D3 /* Debug */,
+				335D1CB13054285E0028E0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		335D1CB23054285E0028E0D3 /* Build configuration list for PBXNativeTarget "walkytalkyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				335D1CB33054285E0028E0D3 /* Debug */,
+				335D1CB43054285E0028E0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		335D1CB5305441ED0028E0D3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.19.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		335D1CB6305441ED0028E0D3 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 335D1CB5305441ED0028E0D3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		335D1CB8305441ED0028E0D3 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 335D1CB5305441ED0028E0D3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		335D1CBA305441ED0028E0D3 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 335D1CB5305441ED0028E0D3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 335D1C833054285D0028E0D3 /* Project object */;
+}

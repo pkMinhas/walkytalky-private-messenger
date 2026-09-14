@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Single-device enforcement (Phase 1): a user may only read/write their
+    // own profile doc, which is where AuthService stores activeDeviceId.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      // Conversations are created out-of-band by an admin (Phase 3 task
+      // list, "out of app scope"), never by the client.
+      allow create, update, delete: if false;
+
+      function conversation() {
+        return get(/databases/$(database)/documents/conversations/$(conversationId));
+      }
+      function isParticipant() {
+        return request.auth != null && request.auth.uid in conversation().data.participants;
+      }
+
+      // Admin-assigned short display names, one doc per participant per
+      // conversation: { displayId: "AB" }. Scoped under the conversation
+      // (rather than a top-level `displaynames/{uid}`) specifically so this
+      // rule can check conversation membership — Firestore rules can't scan
+      // collections to ask "does this uid share any conversation with me,"
+      // only check a path it already knows. Written out-of-band by an admin
+      // (Firebase console/Admin SDK), same convention as the conversation
+      // doc itself — no client write path.
+      match /displaynames/{uid} {
+        allow read: if isParticipant();
+        allow write: if false;
+      }
+
+      match /messages/{messageId} {
+        allow read: if isParticipant();
+        allow create: if isParticipant() && request.resource.data.senderId == request.auth.uid;
+
+        // "Delete for me": any participant, but the update may only ever
+        // touch deletedFor, and only to add their own uid to it.
+        function isDeleteForMe() {
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
+            && request.auth.uid in request.resource.data.deletedFor;
+        }
+        // "Delete for everyone": sender only, no time limit.
+        function isDeleteForEveryone() {
+          return resource.data.senderId == request.auth.uid
+            && request.resource.data.deletedForEveryone == true;
+        }
+
+        allow update: if isParticipant() && (isDeleteForMe() || isDeleteForEveryone());
+        allow delete: if false;
+      }
+    }
+  }
+}

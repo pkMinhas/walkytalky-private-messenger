@@ -1,0 +1,11 @@
+/ios/walkytalky/walkytalky/GoogleService-Info.plist
+
+# Xcode per-user state (not project settings)
+*.xcuserstate
+xcuserdata/
+
+# Firebase CLI local cache
+firebase/.firebase/
+
+# macOS
+.DS_Store

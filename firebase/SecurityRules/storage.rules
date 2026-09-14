@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /media/{conversationId}/{messageId} {
+      // Real, server-verified check against Firestore's own conversation
+      // participants — deliberately NOT the uploader's self-declared
+      // metadata. An earlier version of this rule trusted
+      // request.resource.metadata for authorization, which is fully
+      // attacker-controlled: anyone with a valid (anonymous, trivially
+      // obtained) auth session could self-declare themselves a participant
+      // of any conversationId and write into it. This cross-service read
+      // is the only way to check ground truth from Storage Rules without
+      // adding a Cloud Function.
+      // Guarded with exists() first: calling .data on a get() result for a
+      // conversationId with no real document throws rather than evaluating
+      // to false, which otherwise surfaces as an opaque rules-evaluation
+      // error instead of a clean deny.
+      function conversationExists() {
+        return firestore.exists(/databases/(default)/documents/conversations/$(conversationId));
+      }
+      function isParticipant() {
+        return request.auth != null && conversationExists() &&
+          request.auth.uid in firestore.get(/databases/(default)/documents/conversations/$(conversationId)).data.participants;
+      }
+
+      allow read: if isParticipant();
+      // Also binds the metadata's senderId to the real authenticated
+      // caller — without this, senderId could be forged to someone else's
+      // uid, which would then let that other (uninvolved) uid delete it.
+      allow create: if isParticipant() && request.resource.metadata.senderId == request.auth.uid;
+
+      // senderId is now a rule-enforced invariant as of create time (see
+      // above), so trusting it here for delete-for-everyone is safe.
+      allow delete: if request.auth != null && request.auth.uid == resource.metadata.senderId;
+
+      allow update: if false;
+    }
+
+    // Everything else is denied by default (no catch-all rule).
+  }
+}
