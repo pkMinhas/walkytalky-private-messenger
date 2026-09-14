@@ -23,6 +23,11 @@ struct Message: Identifiable, Codable {
     var deletedFor: [String] = []
     var deletedForEveryone: Bool = false
     @ServerTimestamp var deletedAt: Date?
+    /// Uids who have viewed this message — used to show a read receipt on
+    /// the sender's own sent messages. Only ever grows via arrayUnion, and
+    /// only the recipient (never the sender) may add themselves — see
+    /// `isMarkingRead` in firestore.rules.
+    var readBy: [String] = []
 }
 
 enum MessageEncryptionError: LocalizedError {

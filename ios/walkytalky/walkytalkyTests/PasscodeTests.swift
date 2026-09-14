@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import SwiftUI
 import Testing
 @testable import walkytalky
 
@@ -96,5 +97,32 @@ struct PasscodeServiceTests {
         #expect(service.verify("123456")) // resets failed-attempt counter
         #expect(service.verify("000000") == false) // next failure should be back at tier 1 (~5s), not tier 2 (~30s)
         #expect(service.lockoutRemaining <= 5)
+    }
+
+    @Test func backgroundingLocksImmediatelyWithNoGracePeriod() {
+        let service = freshService()
+        service.setPasscode("123456")
+        #expect(service.isLocked == false)
+
+        service.handleScenePhaseChange(.background)
+        #expect(service.isLocked) // instant, not after any elapsed time
+    }
+
+    @Test func backgroundingIsANoOpBeforeAPasscodeExists() {
+        let service = freshService()
+        #expect(service.hasPasscode == false)
+
+        service.handleScenePhaseChange(.background)
+        #expect(service.isLocked == false) // nothing to lock yet
+    }
+
+    @Test func returningToForegroundDoesNotUnlockOnItsOwn() {
+        let service = freshService()
+        service.setPasscode("123456")
+        service.handleScenePhaseChange(.background)
+        #expect(service.isLocked)
+
+        service.handleScenePhaseChange(.active)
+        #expect(service.isLocked) // still locked until verify() succeeds
     }
 }

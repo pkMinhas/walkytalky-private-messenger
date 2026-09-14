@@ -71,6 +71,7 @@ final class MediaUploadService: ObservableObject {
                 // `@ServerTimestamp var deletedAt` throws DecodingError.keyNotFound
                 // on a genuinely missing key, unlike a plain Optional.
                 "deletedAt": NSNull(),
+                "readBy": [],
             ])
             state = .idle
         } catch {

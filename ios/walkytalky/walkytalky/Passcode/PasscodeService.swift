@@ -3,18 +3,15 @@ import Foundation
 import SwiftUI
 
 /// Local passcode lock: set/verify a 6-digit passcode hashed with PBKDF2
-/// (never stored or sent in plaintext, never written to Firestore), cold-start
-/// and background-timeout locking, and an exponential lockout after failed
+/// (never stored or sent in plaintext, never written to Firestore),
+/// cold-start locking, locking immediately whenever the app is
+/// backgrounded/minimized, and an exponential lockout after failed
 /// attempts. All state lives in the Keychain.
 @MainActor
 final class PasscodeService: ObservableObject {
     @Published private(set) var hasPasscode: Bool
     @Published private(set) var isLocked: Bool
     @Published private(set) var lockoutRemaining: TimeInterval = 0
-
-    /// Background time before the app re-locks on foreground.
-    /// TODO(HUMAN): confirm this value — task list default is 2 minutes.
-    static let autoLockTimeout: TimeInterval = 120
 
     /// Lockout duration after the Nth consecutive failed attempt (index 0 = 1st failure).
     /// The last value repeats as a cap for further failures.
@@ -26,7 +23,6 @@ final class PasscodeService: ObservableObject {
     private let failedAttemptsAccount = "passcodeFailedAttempts"
     private let lockoutUntilAccount = "passcodeLockoutUntil"
 
-    private var backgroundedAt: Date?
     private var lockoutTimer: Timer?
 
     init() {
@@ -160,17 +156,14 @@ final class PasscodeService: ObservableObject {
         isLocked = true
     }
 
-    /// Call on every scene-phase change so backgrounding starts the auto-lock
-    /// clock and returning to foreground re-locks if the timeout elapsed.
+    /// Call on every scene-phase change: minimizing the app (true
+    /// `.background`, not the transient `.inactive` state a system alert or
+    /// Control Center briefly triggers) locks immediately, no grace period.
     func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .background:
-            backgroundedAt = Date()
+            lock()
         case .active:
-            if let backgroundedAt, Date().timeIntervalSince(backgroundedAt) >= Self.autoLockTimeout {
-                lock()
-            }
-            self.backgroundedAt = nil
             refreshLockoutCountdown()
         case .inactive:
             break

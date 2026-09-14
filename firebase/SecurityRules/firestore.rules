@@ -50,8 +50,16 @@ service cloud.firestore {
           return resource.data.senderId == request.auth.uid
             && request.resource.data.deletedForEveryone == true;
         }
+        // Read receipt: only the recipient may mark a message read (never
+        // the sender marking their own), and the update may only ever
+        // touch readBy, only adding their own uid to it.
+        function isMarkingRead() {
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+            && request.auth.uid in request.resource.data.readBy
+            && request.auth.uid != resource.data.senderId;
+        }
 
-        allow update: if isParticipant() && (isDeleteForMe() || isDeleteForEveryone());
+        allow update: if isParticipant() && (isDeleteForMe() || isDeleteForEveryone() || isMarkingRead());
         allow delete: if false;
       }
     }

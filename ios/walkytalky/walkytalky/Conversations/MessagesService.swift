@@ -66,6 +66,7 @@ final class MessagesService: ObservableObject {
             // `@ServerTimestamp var deletedAt` throws DecodingError.keyNotFound
             // on a genuinely missing key, unlike a plain Optional.
             "deletedAt": NSNull(),
+            "readBy": [],
         ])
     }
 
@@ -77,6 +78,18 @@ final class MessagesService: ObservableObject {
             .collection("messages").document(messageId)
         try await ref.updateData([
             "deletedFor": FieldValue.arrayUnion([uid]),
+        ])
+    }
+
+    /// Marks a message as read by the caller — only ever adds the caller's
+    /// own uid to `readBy`. The sender never calls this for their own
+    /// messages (`ChatThreadView` guards on that), and firestore.rules
+    /// enforces it server-side too.
+    func markRead(conversationId: String, messageId: String, uid: String) async throws {
+        let ref = db.collection("conversations").document(conversationId)
+            .collection("messages").document(messageId)
+        try await ref.updateData([
+            "readBy": FieldValue.arrayUnion([uid]),
         ])
     }
 

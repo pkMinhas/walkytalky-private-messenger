@@ -61,7 +61,7 @@ At the user's request, removed magic-link sign-in entirely (see the Phase 0 pivo
 - [x] Implement passcode hashing (PBKDF2 or Argon2, per-device salt) via CryptoKit — `Passcode/PBKDF2.swift`; CryptoKit has no PBKDF2 API of its own, so PBKDF2-HMAC-SHA256 is built on `HMAC<SHA256>`, 100,000 iterations, 16-byte random salt per passcode
 - [x] Store passcode hash + salt in Keychain (never Firestore) — via `Models/KeychainService.swift`, separate `passcodeHash`/`passcodeSalt` accounts
 - [x] Build `PasscodeLockView` shown on cold start and after background timeout — `Passcode/PasscodeLockView.swift`
-- [x] Define and implement background auto-lock timeout (e.g., 2 min) — `PasscodeService.autoLockTimeout = 120s` (default from this task list), driven by `.onChange(of: scenePhase)` in `walkytalkyApp.swift` — `[HUMAN]` confirm this is the right value (marked `TODO(HUMAN)` in code)
+- [x] Define and implement background auto-lock timeout (e.g., 2 min) — **superseded 2026-09-14**: at the user's explicit request, minimizing the app now locks immediately, no grace period — see the dated note in this phase's section. The original `autoLockTimeout = 120s` placeholder (flagged `TODO(HUMAN)` since it was never confirmed) is gone; this answers that open question by replacing it entirely.
 - [x] Build `ChangePasscodeView` (verify current → set new 6-digit) — `Passcode/ChangePasscodeView.swift`, reachable via a "Change Passcode" button on the signed-in placeholder screen; reuses `PasscodeService.verify` so a wrong current-passcode guess here still counts toward the same lockout
 - [x] Implement exponential lockout:
   - [x] Failed-attempt counter in Keychain — `passcodeFailedAttempts` account
@@ -75,6 +75,14 @@ At the user's request, removed magic-link sign-in entirely (see the Phase 0 pivo
 Caught and fixed a real init-order bug: reading the just-assigned `hasPasscode` to set `isLocked` inside `PasscodeService.init()` failed to compile (`@Published`'s `ObservableObject` machinery touches `self` before all stored properties are initialized) — fixed by computing both from a local `let` first. Also fixed a Swift-6-mode concurrency warning in the lockout countdown timer.
 
 Not yet exercised end-to-end: the actual on-device UI flow (setup → background → re-lock → unlock, lockout countdown ticking down in the running app), since reaching it requires a signed-in session, which is still blocked on the Phase 0/1 `[HUMAN]` Firebase Auth console item. The Manual QA task above should cover this once that's unblocked.
+
+### 2026-09-14 — Changed: lock immediately on minimize, not after a timeout
+
+At the user's explicit request: minimizing the app now locks the UI immediately, replacing the 2-minute-grace-period design entirely (that value was always a `TODO(HUMAN)` placeholder, never confirmed — this instruction answers that open question).
+
+`PasscodeService.handleScenePhaseChange` now calls `lock()` directly on `.background` (true minimize/app-switch, not the transient `.inactive` state a system alert or Control Center swipe briefly triggers) instead of recording a timestamp to check against a timeout on next foreground. Removed the now-dead `autoLockTimeout` constant and `backgroundedAt` tracking entirely, rather than leaving unused code behind.
+
+Added 3 tests: backgrounding locks instantly with a passcode set (no elapsed-time dependency), is a no-op before any passcode exists (nothing to lock), and returning to `.active` doesn't itself unlock — still requires `verify()` to succeed. Full suite green (34/34).
 
 ---
 
@@ -248,6 +256,17 @@ Added 3 tests: downscale preserves aspect ratio (7680×3840 → 3840×1920), sma
 - [x] `[HUMAN]` Review updated security rules before deploying — approved and deployed 2026-09-14 along with Phase 3's rules (same file)
 
 **Verified so far:** `xcodebuild` build succeeds cleanly, full test suite still green (22/22, no regressions). Added `deletedAt` to the `Message` model (called for by this phase's own delete-for-everyone task but missing from Phase 3's original field list). Not exercisable end-to-end: needs the same real signed-in/paired/admin-created-conversation chain as Phases 3–7, plus deployed rules.
+
+### 2026-09-14 — Added: read receipts
+
+At the user's request: a double-checkmark indicator on the sender's own messages (gray = sent, blue = read), same convention as most chat apps.
+
+- `Message`: new `readBy: [String]` field, same `arrayUnion`-based pattern as `deletedFor` — grows via `MessagesService.markRead`, which only ever adds the caller's own uid.
+- `ChatThreadView`: each message bubble's `onAppear` calls `markReadIfNeeded`, which is a no-op unless the message (a) isn't the viewer's own, (b) isn't already marked read by them, and (c) isn't tombstoned. Since the message list uses `LazyVStack`, this naturally only fires as a bubble actually scrolls into view — a message below the fold hasn't been "read" yet, which is the right semantics.
+- `MessageBubble` gained an `isReadByOther` parameter (computed in `ChatThreadView` from `message.readBy.contains(otherUid)`) and renders the checkmark pair next to the timestamp, only when `isMine` — applies to both text and media messages.
+- `firestore.rules`: new `isMarkingRead()` alongside the existing `isDeleteForMe`/`isDeleteForEveryone` — the update may only ever touch `readBy`, only adding the caller's own uid, and explicitly **not** the sender marking their own message (enforced server-side, not just client-side).
+
+Full suite still green (31/31). `firestore.rules` deployed 2026-09-14 (user approved), compiled clean.
 
 ---
 

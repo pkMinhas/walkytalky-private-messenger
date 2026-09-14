@@ -80,9 +80,11 @@ struct ChatThreadView: View {
                                 MessageBubble(
                                     message: message,
                                     isMine: message.senderId == myUid,
-                                    conversationId: conversation.id ?? ""
+                                    conversationId: conversation.id ?? "",
+                                    isReadByOther: otherUid.map { message.readBy.contains($0) } ?? false
                                 )
                                 .id(message.id)
+                                .onAppear { markReadIfNeeded(message) }
                                 .contextMenu {
                                     Button("Delete for Me", role: .destructive) {
                                         deleteForMe(message)
@@ -269,6 +271,19 @@ struct ChatThreadView: View {
             try? await messagesService.deleteForEveryone(conversationId: id, message: message)
         }
     }
+
+    private func markReadIfNeeded(_ message: Message) {
+        guard let id = conversation.id,
+              let messageId = message.id,
+              !myUid.isEmpty,
+              message.senderId != myUid,
+              !message.readBy.contains(myUid),
+              !message.deletedForEveryone
+        else { return }
+        Task {
+            try? await messagesService.markRead(conversationId: id, messageId: messageId, uid: myUid)
+        }
+    }
 }
 
 private enum ThreadRow: Identifiable {
@@ -309,6 +324,9 @@ private struct MessageBubble: View {
     let message: Message
     let isMine: Bool
     let conversationId: String
+    /// Whether the other participant has this uid in `readBy`. Only
+    /// meaningful (and only rendered) for messages this device sent.
+    let isReadByOther: Bool
 
     var body: some View {
         HStack {
@@ -336,9 +354,14 @@ private struct MessageBubble: View {
             case .text:
                 VStack(alignment: .leading, spacing: 2) {
                     Text(message.decryptedText(conversationId: conversationId))
-                    Text(timeText)
-                        .font(.caption2)
-                        .foregroundStyle(isMine ? .white.opacity(0.7) : .secondary)
+                    HStack(spacing: 4) {
+                        Text(timeText)
+                            .font(.caption2)
+                            .foregroundStyle(isMine ? .white.opacity(0.7) : .secondary)
+                        if isMine {
+                            readReceiptIcon()
+                        }
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -349,9 +372,14 @@ private struct MessageBubble: View {
             case .image, .gif:
                 VStack(alignment: .leading, spacing: 2) {
                     MediaMessageView(message: message, conversationId: conversationId)
-                    Text(timeText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(timeText)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        if isMine {
+                            readReceiptIcon()
+                        }
+                    }
                 }
             }
     }
@@ -359,6 +387,19 @@ private struct MessageBubble: View {
     private var timeText: String {
         guard let date = message.createdAt else { return "" }
         return date.formatted(date: .omitted, time: .shortened)
+    }
+
+    /// Double-checkmark read receipt, shown only on the sender's own
+    /// messages: dim/gray while unread, blue once the other participant's
+    /// uid appears in `readBy`.
+    private func readReceiptIcon() -> some View {
+        HStack(spacing: -5) {
+            Image(systemName: "checkmark")
+            isReadByOther ? Image(systemName: "checkmark") : Image(systemName: "dot")
+        }
+        .font(.system(size: 9, weight: .bold))
+        .foregroundStyle(Color.white)
+        .accessibilityLabel(isReadByOther ? "Read" : "Sent")
     }
 
     /// A flattened corner on the sender's side gives the bubble a WhatsApp-
