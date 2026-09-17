@@ -131,6 +131,15 @@ struct MediaPagerView: View {
         messages[currentIndex].id.flatMap { loadedMedia[$0] }
     }
 
+    /// A file, named `walkytalky-image.<jpg|gif>`, holding the exact bytes
+    /// `MediaStorage` cached for the current message — shared via
+    /// `ShareLink(item:)` instead of `Image(uiImage:)`, which always
+    /// re-encodes to PNG regardless of the original format and carries no
+    /// filename of its own. Refreshed explicitly (see `refreshShareURL`)
+    /// rather than recomputed in `chrome`'s body, since that's re-evaluated
+    /// on every drag update — far too often to be writing files from.
+    @State private var shareURL: URL?
+
     /// Live drag translation. `.width` drives the page-turn (and, while
     /// zoomed, carries only the pan's "overdrag" past its bounds, so the
     /// next/previous page previews sliding in under the finger). `.height`
@@ -175,6 +184,7 @@ struct MediaPagerView: View {
                             if let id = messages[index].id, let media {
                                 loadedMedia[id] = media
                             }
+                            refreshShareURL()
                         }
                     )
                     .frame(width: size.width, height: size.height)
@@ -209,6 +219,7 @@ struct MediaPagerView: View {
                 }
             }
         }
+        .onAppear { refreshShareURL() }
     }
 
     private var visibleIndices: [Int] {
@@ -239,10 +250,10 @@ struct MediaPagerView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                if let currentMedia {
+                if let shareURL, let currentMedia {
                     ShareLink(
-                        item: Image(uiImage: currentMedia.primaryImage),
-                        preview: SharePreview("Photo", image: Image(uiImage: currentMedia.primaryImage))
+                        item: shareURL,
+                        preview: SharePreview("walkytalky-image", image: Image(uiImage: currentMedia.primaryImage))
                     ) {
                         Image(systemName: "square.and.arrow.up.circle.fill")
                             .font(.system(size: 28))
@@ -252,6 +263,24 @@ struct MediaPagerView: View {
             }
             .padding()
             Spacer()
+        }
+    }
+
+    /// Rewrites the share temp file from whatever's currently cached on
+    /// disk for the current message — a no-op (leaves `shareURL` as-is
+    /// momentarily) if that message hasn't finished decrypting yet; the
+    /// `onLoaded` callback calls this again once it has.
+    private func refreshShareURL() {
+        guard let messageId = messages[currentIndex].id, let data = MediaStorage.read(messageId: messageId) else {
+            return
+        }
+        let fileExtension = messages[currentIndex].type == .gif ? "gif" : "jpg"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("walkytalky-image.\(fileExtension)")
+        do {
+            try data.write(to: url, options: .atomic)
+            shareURL = url
+        } catch {
+            shareURL = nil
         }
     }
 
@@ -328,6 +357,7 @@ struct MediaPagerView: View {
             dragTranslation = .zero
             resetZoom()
         }
+        refreshShareURL()
     }
 
     private func resetZoom() {

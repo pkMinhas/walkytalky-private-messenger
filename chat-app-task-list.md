@@ -364,6 +364,14 @@ The user reported panning a zoomed image would jump to the next/previous photo o
 
 Full suite still green (43/43). No Firebase deploy needed.
 
+### 2026-09-17 — Fix: shared image was always a PNG with no real filename
+
+The user reported the pager's share button always shared a PNG regardless of the original format (JPEG photos, GIFs), with no meaningful filename. Root cause: `ShareLink(item: Image(uiImage:))` shares whatever `Image`'s own `Transferable` conformance produces, which re-encodes to PNG unconditionally and carries no filename.
+
+Fixed by sharing a real file instead: `MediaStorage` already caches the exact raw decrypted bytes on disk (the same bytes `GIFDecoder`/`UIImage(data:)` read from, never re-encoded), so at share time those bytes are copied as-is to `<tmp>/walkytalky-image.jpg` (or `.gif` for `.gif`-typed messages) and shared via `ShareLink(item: URL)` — original format preserved exactly, filename fixed as requested. The temp file is refreshed explicitly (on appear, whenever a page finishes decrypting, and on every page change) rather than recomputed inline in the toolbar's view body, since that gets re-evaluated many times a second during a drag — writing a file from there on every frame would be wasteful.
+
+Full suite still green (43/43). No Firebase deploy needed.
+
 ---
 
 ## Phase 11 — Hardening & QA
