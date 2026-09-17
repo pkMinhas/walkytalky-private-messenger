@@ -2,7 +2,7 @@
 
 A self-hosted, end-to-end encrypted 1:1 chat app for iOS, built on Firebase (Auth, Firestore, Storage). No central operator reads your messages or media — encryption keys are derived on-device via an offline QR handshake and never leave the device.
 
-This project is source-available for anyone who wants to run their own instance. There is no shared/hosted "walkytalky service" — every deployer stands up their own Firebase project and owns their own data.
+This project is open source (MIT) for anyone who wants to run their own instance. There is no shared/hosted "walkytalky service" — every deployer stands up their own Firebase project and owns their own data.
 
 ## Table of contents
 
@@ -176,4 +176,4 @@ firebase/
 
 ## License
 
-No license has been chosen yet for this repository. Until one is added, standard copyright applies — don't assume you're free to reuse this code. If you're the maintainer, pick and add a `LICENSE` file before calling this "open source" in any binding sense.
+MIT — see [`LICENSE`](LICENSE).
