@@ -298,6 +298,64 @@ struct GIFDecoderTests {
     }
 }
 
+struct ZoomPanMathTests {
+    @Test func noPanRoomAtScaleOne() {
+        // .scaledToFit() content never exceeds its container at scale 1,
+        // regardless of aspect ratio, so there's nothing to pan.
+        let offset = ZoomPanMath.maxPanOffset(
+            imageSize: CGSize(width: 200, height: 100),
+            containerSize: CGSize(width: 100, height: 100),
+            scale: 1
+        )
+        #expect(offset == .zero)
+    }
+
+    @Test func matchingAspectRatioPansEquallyInBothAxes() {
+        // Image and container share an aspect ratio, so the fitted image
+        // exactly fills the container; at 2x, both axes overflow by the
+        // same half-width/half-height.
+        let offset = ZoomPanMath.maxPanOffset(
+            imageSize: CGSize(width: 100, height: 100),
+            containerSize: CGSize(width: 100, height: 100),
+            scale: 2
+        )
+        #expect(offset.width == 50)
+        #expect(offset.height == 50)
+    }
+
+    @Test func widerImageInASquareContainerOnlyPansHorizontallyAtLowZoom() {
+        // 2:1 image fit into a 1:1 container: it fills the width and
+        // letterboxes vertically (fitSize 100x50), so at a zoom level that
+        // doesn't push the letterboxed height past the container's height,
+        // vertical pan room stays zero even though horizontal doesn't.
+        let imageSize = CGSize(width: 200, height: 100)
+        let containerSize = CGSize(width: 100, height: 100)
+
+        let unzoomed = ZoomPanMath.maxPanOffset(imageSize: imageSize, containerSize: containerSize, scale: 1)
+        #expect(unzoomed == .zero)
+
+        let zoomed = ZoomPanMath.maxPanOffset(imageSize: imageSize, containerSize: containerSize, scale: 3)
+        #expect(zoomed.width == 100) // (200*3/2... ) fitSize.width=100, scaled=300, (300-100)/2=100
+        #expect(zoomed.height == 25) // fitSize.height=50, scaled=150, (150-100)/2=25
+    }
+
+    @Test func tallerImageInAWideContainerIsTheMirrorCase() {
+        let offset = ZoomPanMath.maxPanOffset(
+            imageSize: CGSize(width: 100, height: 200),
+            containerSize: CGSize(width: 200, height: 100),
+            scale: 3
+        )
+        // fitSize = (50, 100); scaled = (150, 300); pan = ((150-200)/2 clamped to 0, (300-100)/2)
+        #expect(offset.width == 0)
+        #expect(offset.height == 100)
+    }
+
+    @Test func zeroSizedImageOrContainerHasNoPanRoom() {
+        #expect(ZoomPanMath.maxPanOffset(imageSize: .zero, containerSize: CGSize(width: 100, height: 100), scale: 3) == .zero)
+        #expect(ZoomPanMath.maxPanOffset(imageSize: CGSize(width: 100, height: 100), containerSize: .zero, scale: 3) == .zero)
+    }
+}
+
 @MainActor
 struct MediaStorageTests {
     @Test func writeReadDeleteRoundTrips() throws {

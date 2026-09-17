@@ -345,6 +345,25 @@ This didn't reproduce in a clean `xcodebuild` build in this session (whole-modul
 
 Full suite still green (38/38). No Firebase deploy needed — pure Swift concurrency annotation fix, no behavior change.
 
+### 2026-09-17 — Paged viewer: pan-to-boundary page turns, swipe-down to dismiss
+
+At the user's request: in the fullscreen pager, panning a zoomed-in image to its edge and continuing to drag now hands off into moving to the next/previous photo, and swiping down (while not zoomed) dismisses the viewer.
+
+Neither is achievable as an add-on to the previous `TabView(.page)`-based pager: `TabView` owns its own paging gesture and can't be made to hand off a pan gesture mid-drag once it hits a zoomed image's edge, and a second, independent swipe-to-dismiss gesture would fight `TabView`'s gesture for the same touch. So `MediaPagerView` was rewritten as a fully custom pager — one `SimultaneousGesture(MagnificationGesture, DragGesture)` at the top level owns pinch-zoom, pan, page-turns, boundary hand-off, and dismiss, with only the current ± 1 pages rendered (windowed, so a large conversation's media isn't all decrypting at once). Zoom state is scoped to whichever page is current and resets on every page change, matching most photo viewers. `FullscreenImageViewer.swift` (the old `ZoomableImage`/`FullscreenImageViewer` pair) is deleted — its chrome (close button, page counter, share button) and zoom/pan gesture both moved into `MediaPagerView` itself, since it had no other callers once the pager stopped delegating to it.
+
+The boundary math (how far a `.scaledToFit()` image can pan at a given zoom level before its edge reaches the container's edge — the trigger for the hand-off) is extracted into a pure `ZoomPanMath.maxPanOffset(imageSize:containerSize:scale:)`, covered by new `ZoomPanMathTests` (matching/mismatched aspect ratios, zero-size edge cases) rather than left untestable inside the gesture closures.
+
+Full suite green (43/43, 5 new). No Firebase deploy needed — purely client-side gesture/UI rework.
+
+### 2026-09-17 — Two bugs in the custom pager, same day it shipped
+
+The user reported panning a zoomed image would jump to the next/previous photo on *any* pan, not just at the edge, and that the close/share buttons sat under the status bar.
+
+1. **Boundary detection was broken for pre-loaded pages.** `currentMedia` (used to compute how much pan room the image has left) was only ever set the first time a page's decrypt finished, gated on `index == currentIndex` *at that moment*. A neighboring page pre-loads before the user swipes to it — by design, so paging feels instant — so when it later became current, nothing re-populated `currentMedia` for it: no `.task` re-run (its `id` hadn't changed), no new call to `onLoaded`. With `currentMedia` stuck at `nil`, the boundary math (`ZoomPanMath.maxPanOffset`) always returned zero pan room, so every pan read as "already at the edge" and immediately triggered a page turn. Fixed by replacing the single `currentMedia` state with a `loadedMedia: [String: DecodedMedia]` dictionary that *every* page writes into as soon as it decrypts (current or not), with `currentMedia` now a computed lookup by the current message's id — always accurate regardless of load order.
+2. **Chrome sat under the status bar.** The pager's `.ignoresSafeArea()` (needed so the black background and photos go edge-to-edge, same as any photo viewer) was applying to the close/page-count/share overlay too, since it was just another layer in the same ZStack. First fix attempt (reading `geo.safeAreaInsets.top` and padding the chrome down by that amount manually) **did not work** — confirmed by the user after testing. Root cause of that failure: `.ignoresSafeArea()` on an ancestor doesn't just expand the frame, it consumes the safe-area boundary for that edge going forward, so `geo.safeAreaInsets.top` read back as 0 inside a `GeometryReader` that had `.ignoresSafeArea()` applied to it (or an ancestor) — the manual inset was computing `0 + 8`, nowhere near enough to clear a 47-59pt status bar. Fixed properly the second time by *not* applying `.ignoresSafeArea()` to the whole view at all — only `Color.black` (the background layer) gets it, so it alone bleeds edge-to-edge, while the chrome and the pages themselves are left to SwiftUI's normal safe-area-respecting layout and get correct top padding for free. This is the standard "background ignores safe area, content doesn't" pattern Apple documents for exactly this situation, rather than reimplementing it by hand.
+
+Full suite still green (43/43). No Firebase deploy needed.
+
 ---
 
 ## Phase 11 — Hardening & QA
