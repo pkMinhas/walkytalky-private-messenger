@@ -6,7 +6,15 @@ import UIKit
 /// `MediaDecryptor`, consumed by `MediaImageView` everywhere the app shows
 /// decrypted media, so the animate-or-not decision is made once, at decode
 /// time, rather than duplicated at each call site.
-struct DecodedMedia {
+///
+/// `nonisolated` because this (like the rest of `MediaDecryptor`'s pipeline
+/// — download, decrypt, decode) is pure data work with no UI-thread
+/// requirement; the project's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`
+/// setting would otherwise pin it to the main actor by default, which is
+/// both wrong (it'd force decode work onto the main thread) and, for the
+/// `single` factory specifically, fails to compile at all when referenced
+/// as a bare function value from a nonisolated context.
+nonisolated struct DecodedMedia {
     let frames: [UIImage]
     let frameDelays: [TimeInterval]
 
@@ -24,7 +32,7 @@ struct DecodedMedia {
 /// surfaces a GIF's first frame — SwiftUI's `Image` has no concept of an
 /// animated `UIImage` either — so an animated GIF needs its frames pulled
 /// out individually via ImageIO for `MediaImageView` to actually animate it.
-enum GIFDecoder {
+nonisolated enum GIFDecoder {
     static func decode(_ data: Data) -> DecodedMedia? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let frameCount = CGImageSourceGetCount(source)

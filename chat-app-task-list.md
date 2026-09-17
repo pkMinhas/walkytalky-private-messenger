@@ -337,6 +337,14 @@ At the user's request: an animated GIF's chat-bubble and grid thumbnails now sho
 
 Full suite still green (38/38) — no new test added here since this is pure view-state/UI behavior with no non-trivial pure logic to isolate (the existing `GIFDecoderTests`/`ImageSanitizerTests` already cover the actual frame-timing math this button pauses and resumes). No Firebase deploy needed.
 
+### 2026-09-17 — Fix: `DecodedMedia.single` actor-isolation compile error
+
+The user reported an Xcode error: "Call to main actor-isolated static method 'single' in a synchronous nonisolated context" at `MediaDecryptor.swift`. Root cause: the project sets `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (Debug/Release configs of the main app target only — not the test targets), so `DecodedMedia` and `GIFDecoder`, added earlier today with no explicit isolation, silently defaulted to `@MainActor`. `MediaDecryptor.decode(_:type:)` calls `DecodedMedia.single` as a bare function value passed to `Optional.map`, which requires a plain nonisolated closure type — a MainActor-isolated method can't be converted to one from a nonisolated context, hence the error.
+
+This didn't reproduce in a clean `xcodebuild` build in this session (whole-module compilation apparently tolerates it where SourceKit's per-file checking doesn't), but the underlying mismatch was real regardless: this whole pipeline (download, decrypt, decode) is meant to run off the main thread, so pinning any of it to `@MainActor` by default is wrong on its own terms, not just a compile error to silence. Fixed by explicitly marking `DecodedMedia` and `GIFDecoder` `nonisolated`.
+
+Full suite still green (38/38). No Firebase deploy needed — pure Swift concurrency annotation fix, no behavior change.
+
 ---
 
 ## Phase 11 — Hardening & QA
