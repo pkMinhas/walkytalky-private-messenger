@@ -320,6 +320,15 @@ Follow-up same day, per the user's request: tapping a media thumbnail directly i
 
 Full suite still green (31/31) after both changes — no regressions in the extracted decrypt/crypto/cache logic.
 
+### 2026-09-17 — Real bug: GIFs never animated, in the bubble or the pager
+
+The user reported GIFs weren't animating anywhere. Two separate, compounding bugs:
+
+1. **Upload-side (the real data loss):** `ImageSanitizer.stripMetadata(from:)` — the path GIFs go through instead of JPEG re-encoding — decoded via `UIImage(data:)` (which only ever surfaces a GIF's first frame) and wrote back exactly one `CGImageDestinationAddImage` call. Every GIF was silently flattened to a static single frame *before* it was ever encrypted and uploaded — this predates the media-gallery work above, so it's been broken since GIF support originally shipped, just never exercised with a real multi-frame GIF. Fixed by detecting a multi-frame source (`CGImageSourceGetCount(source) > 1`) and routing it through a new `stripMetadataFromAnimatedSource`, which copies every frame plus its own delay time and the source's loop count into the destination, instead of the single-frame path.
+2. **Render-side:** even with animation preserved end-to-end, SwiftUI's `Image` never animates a multi-frame `UIImage` — it only ever shows one representative frame, full stop. Fixed by decoding GIFs into every individual frame + delay (new `GIFDecoder`, producing a `DecodedMedia` struct) and rendering through a new `MediaImageView`, which uses `TimelineView(.animation)` to cycle frames by elapsed time for an animated source and falls straight through to a plain `Image` for a static one (so no wasted redraws on the vastly more common case). `MediaDecryptor` now returns `DecodedMedia` instead of a bare `UIImage`; `MediaMessageView`, `MediaGridThumbnail`, `MediaPagerPage`, and `ZoomableImage`/`FullscreenImageViewer` all switched over — every place that shows decrypted media now animates GIFs consistently (chat bubble, grid, and paged viewer alike).
+
+Added `GIFDecoderTests` (frame count, per-frame delay, the sub-0.02s-delay-clamps-to-0.1s convention real decoders use) and two `ImageSanitizerTests` regression cases (frame count and delay/loop-count survive `stripMetadata`) built on a shared real-GIF-container fixture helper. Full suite green (38/38). No Firebase deploy needed — purely client-side encode/decode/render.
+
 ---
 
 ## Phase 11 — Hardening & QA

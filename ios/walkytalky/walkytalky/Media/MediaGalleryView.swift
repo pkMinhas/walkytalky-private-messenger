@@ -65,15 +65,14 @@ private struct MediaGridThumbnail: View {
     let message: Message
     let conversationId: String
 
-    @State private var uiImage: UIImage?
+    @State private var media: DecodedMedia?
     @State private var failed = false
 
     var body: some View {
         GeometryReader { geo in
             Group {
-                if let uiImage {
-                    Image(uiImage: uiImage)
-                        .resizable()
+                if let media {
+                    MediaImageView(media: media)
                         .scaledToFill()
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
@@ -90,8 +89,8 @@ private struct MediaGridThumbnail: View {
             }
         }
         .task(id: message.id) {
-            uiImage = await MediaDecryptor.decryptedImage(for: message, conversationId: conversationId)
-            failed = uiImage == nil
+            media = await MediaDecryptor.decryptedMedia(for: message, conversationId: conversationId)
+            failed = media == nil
         }
     }
 }
@@ -136,13 +135,13 @@ private struct MediaPagerPage: View {
     let conversationId: String
     let pageInfo: String?
 
-    @State private var uiImage: UIImage?
+    @State private var media: DecodedMedia?
     @State private var failed = false
 
     var body: some View {
         Group {
-            if let uiImage {
-                FullscreenImageViewer(image: uiImage, pageInfo: pageInfo)
+            if let media {
+                FullscreenImageViewer(media: media, pageInfo: pageInfo)
             } else {
                 ZStack {
                     Color.black.ignoresSafeArea()
@@ -159,8 +158,8 @@ private struct MediaPagerPage: View {
             }
         }
         .task(id: message.id) {
-            uiImage = await MediaDecryptor.decryptedImage(for: message, conversationId: conversationId)
-            failed = uiImage == nil
+            media = await MediaDecryptor.decryptedMedia(for: message, conversationId: conversationId)
+            failed = media == nil
         }
     }
 }

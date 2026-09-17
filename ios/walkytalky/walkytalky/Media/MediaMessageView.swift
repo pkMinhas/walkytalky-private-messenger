@@ -18,7 +18,7 @@ struct MediaMessageView: View {
     /// just this one.
     let mediaMessages: [Message]
 
-    @State private var uiImage: UIImage?
+    @State private var media: DecodedMedia?
     @State private var errorText: String?
     @State private var showFullscreen = false
 
@@ -35,9 +35,8 @@ struct MediaMessageView: View {
 
     var body: some View {
         Group {
-            if let uiImage {
-                Image(uiImage: uiImage)
-                    .resizable()
+            if let media {
+                MediaImageView(media: media)
                     .scaledToFit()
                     .frame(maxWidth: 220, maxHeight: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -63,8 +62,8 @@ struct MediaMessageView: View {
             }
         }
         .task(id: message.id) {
-            uiImage = await MediaDecryptor.decryptedImage(for: message, conversationId: conversationId)
-            if uiImage == nil {
+            media = await MediaDecryptor.decryptedMedia(for: message, conversationId: conversationId)
+            if media == nil {
                 errorText = "Can't decrypt this message"
             }
         }

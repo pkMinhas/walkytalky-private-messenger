@@ -61,6 +61,33 @@ struct MediaCryptoTests {
     }
 }
 
+/// Builds `frameCount` solid-color frames into real GIF-container data, each
+/// tagged with `delay` (seconds) and the file tagged with `loopCount` —
+/// shared by `ImageSanitizerTests` and `GIFDecoderTests`.
+fileprivate func animatedGIFData(frameCount: Int, delay: Double = 0.2, loopCount: Int = 0) -> Data {
+    let output = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(output, UTType.gif.identifier as CFString, frameCount, nil)!
+    CGImageDestinationSetProperties(destination, [
+        kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: loopCount],
+    ] as CFDictionary)
+
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    let renderer = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4), format: format)
+    let colors: [UIColor] = [.red, .green, .blue]
+    for index in 0..<frameCount {
+        let image = renderer.image { context in
+            colors[index % colors.count].setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+        CGImageDestinationAddImage(destination, image.cgImage!, [
+            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: delay],
+        ] as CFDictionary)
+    }
+    _ = CGImageDestinationFinalize(destination)
+    return output as Data
+}
+
 struct ImageSanitizerTests {
     private func testJPEGData() -> Data {
         // Explicit scale 1, otherwise UIGraphicsImageRenderer defaults to the
@@ -210,6 +237,64 @@ struct ImageSanitizerTests {
         let source = try #require(CGImageSourceCreateWithData(prepared as CFData, nil))
         let type = CGImageSourceGetType(source) as String?
         #expect(type == UTType.jpeg.identifier)
+    }
+
+    // Regression test: `stripMetadata` used to decode via `UIImage(data:)`
+    // and write back exactly one `CGImageDestinationAddImage` call, which
+    // silently flattened every animated GIF to its first frame before it
+    // was ever encrypted and uploaded.
+    @Test func stripMetadataPreservesEveryFrameOfAnAnimatedGIF() throws {
+        let original = animatedGIFData(frameCount: 3)
+        let stripped = try #require(ImageSanitizer.stripMetadata(from: original))
+
+        let source = try #require(CGImageSourceCreateWithData(stripped as CFData, nil))
+        #expect(CGImageSourceGetCount(source) == 3)
+    }
+
+    @Test func stripMetadataPreservesPerFrameDelayAndLoopCount() throws {
+        let original = animatedGIFData(frameCount: 2, delay: 0.3, loopCount: 0)
+        let stripped = try #require(ImageSanitizer.stripMetadata(from: original))
+        let source = try #require(CGImageSourceCreateWithData(stripped as CFData, nil))
+
+        let frameProperties = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any])
+        let frameGIFProperties = try #require(frameProperties[kCGImagePropertyGIFDictionary as String] as? [String: Any])
+        let delay = try #require(frameGIFProperties[kCGImagePropertyGIFDelayTime as String] as? Double)
+        #expect(abs(delay - 0.3) < 0.01)
+
+        let sourceProperties = try #require(CGImageSourceCopyProperties(source, nil) as? [String: Any])
+        let sourceGIFProperties = try #require(sourceProperties[kCGImagePropertyGIFDictionary as String] as? [String: Any])
+        let loopCount = try #require(sourceGIFProperties[kCGImagePropertyGIFLoopCount as String] as? Int)
+        #expect(loopCount == 0)
+    }
+}
+
+struct GIFDecoderTests {
+    @Test func decodeReturnsEveryFrameOfAnAnimatedGIF() throws {
+        let media = try #require(GIFDecoder.decode(animatedGIFData(frameCount: 4)))
+        #expect(media.frames.count == 4)
+        #expect(media.frameDelays.count == 4)
+    }
+
+    @Test func decodeReturnsEachFramesDelay() throws {
+        let media = try #require(GIFDecoder.decode(animatedGIFData(frameCount: 3, delay: 0.25)))
+        for delay in media.frameDelays {
+            #expect(abs(delay - 0.25) < 0.01)
+        }
+    }
+
+    // Real GIFs sometimes carry a delay of 0 (or omit it); decoders
+    // (browsers included) clamp anything under ~0.02s up to a de facto
+    // default of 0.1s rather than spinning the animation unreasonably fast.
+    @Test func decodeClampsSubThresholdDelaysToTheDefault() throws {
+        let media = try #require(GIFDecoder.decode(animatedGIFData(frameCount: 2, delay: 0)))
+        for delay in media.frameDelays {
+            #expect(abs(delay - 0.1) < 0.01)
+        }
+    }
+
+    @Test func decodeOnASingleFrameSourceStillReturnsOneFrame() throws {
+        let media = try #require(GIFDecoder.decode(animatedGIFData(frameCount: 1)))
+        #expect(media.frames.count == 1)
     }
 }
 

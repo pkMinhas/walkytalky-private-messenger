@@ -54,17 +54,67 @@ enum ImageSanitizer {
     /// display upright, with the raw pixel buffer left unrotated. Stripping
     /// metadata without accounting for that first would silently drop the
     /// tag and leave the image permanently sideways.
+    ///
+    /// A multi-frame source (an animated GIF) is detected and routed to
+    /// `stripMetadataFromAnimatedSource` instead — the single-frame path
+    /// below would otherwise silently flatten it to its first frame, which
+    /// is what `UIImage(data:)` / a single `CGImageDestinationAddImage`
+    /// call does with an animated source.
     static func stripMetadata(from data: Data) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+
+        let frameCount = CGImageSourceGetCount(source)
+        if frameCount > 1 {
+            return stripMetadataFromAnimatedSource(source, frameCount: frameCount)
+        }
+
         guard let sourceImage = UIImage(data: data),
               let normalized = normalizedCGImage(from: sourceImage)
         else { return nil }
 
-        let type = CGImageSourceCreateWithData(data as CFData, nil)
-            .flatMap { CGImageSourceGetType($0) } ?? UTType.jpeg.identifier as CFString
+        let type = CGImageSourceGetType(source) ?? (UTType.jpeg.identifier as CFString)
         let output = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(output, type, 1, nil) else { return nil }
 
         CGImageDestinationAddImage(destination, normalized, nil)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return output as Data
+    }
+
+    /// Copies every frame of an animated (GIF) source into a fresh
+    /// destination, preserving each frame's delay time and the source's
+    /// loop count — the structural properties required for correct
+    /// playback — while dropping everything else. Frames need no
+    /// orientation-normalization pass the way single photos do; GIF has no
+    /// EXIF-orientation concept.
+    private static func stripMetadataFromAnimatedSource(_ source: CGImageSource, frameCount: Int) -> Data? {
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output, UTType.gif.identifier as CFString, frameCount, nil
+        ) else { return nil }
+
+        if let sourceProperties = CGImageSourceCopyProperties(source, nil) as? [String: Any],
+           let gifProperties = sourceProperties[kCGImagePropertyGIFDictionary as String] as? [String: Any],
+           let loopCount = gifProperties[kCGImagePropertyGIFLoopCount as String] {
+            CGImageDestinationSetProperties(destination, [
+                kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: loopCount],
+            ] as CFDictionary)
+        }
+
+        for index in 0..<frameCount {
+            guard let frame = CGImageSourceCreateImageAtIndex(source, index, nil) else { return nil }
+
+            var frameProperties: [String: Any] = [:]
+            if let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any],
+               let gifProperties = properties[kCGImagePropertyGIFDictionary as String] as? [String: Any],
+               let delay = gifProperties[kCGImagePropertyGIFUnclampedDelayTime as String]
+                   ?? gifProperties[kCGImagePropertyGIFDelayTime as String] {
+                frameProperties[kCGImagePropertyGIFDictionary as String] = [kCGImagePropertyGIFDelayTime as String: delay]
+            }
+
+            CGImageDestinationAddImage(destination, frame, frameProperties as CFDictionary)
+        }
+
         guard CGImageDestinationFinalize(destination) else { return nil }
         return output as Data
     }

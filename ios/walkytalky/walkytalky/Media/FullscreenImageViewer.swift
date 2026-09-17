@@ -4,7 +4,7 @@ import SwiftUI
 /// chrome of its own — shared by the single-image `FullscreenImageViewer`
 /// and each page of `MediaPagerView`.
 struct ZoomableImage: View {
-    let image: UIImage
+    let media: DecodedMedia
 
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
@@ -12,8 +12,7 @@ struct ZoomableImage: View {
     @State private var lastOffset: CGSize = .zero
 
     var body: some View {
-        Image(uiImage: image)
-            .resizable()
+        MediaImageView(media: media)
             .scaledToFit()
             .scaleEffect(scale)
             .offset(offset)
@@ -69,7 +68,7 @@ struct ZoomableImage: View {
 /// shown centered in the top bar when this is one page of `MediaPagerView`;
 /// leave it nil for the single-image case opened from a chat bubble.
 struct FullscreenImageViewer: View {
-    let image: UIImage
+    let media: DecodedMedia
     var pageInfo: String? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -77,7 +76,7 @@ struct FullscreenImageViewer: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            ZoomableImage(image: image)
+            ZoomableImage(media: media)
         }
         .overlay(alignment: .top) {
             HStack {
@@ -94,8 +93,8 @@ struct FullscreenImageViewer: View {
                 }
                 Spacer()
                 ShareLink(
-                    item: Image(uiImage: image),
-                    preview: SharePreview("Photo", image: Image(uiImage: image))
+                    item: Image(uiImage: media.primaryImage),
+                    preview: SharePreview("Photo", image: Image(uiImage: media.primaryImage))
                 ) {
                     Image(systemName: "square.and.arrow.up.circle.fill")
                         .font(.system(size: 28))
