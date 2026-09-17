@@ -308,6 +308,18 @@ Once that existed, the standalone save button on each thumbnail (Phase 7) became
 
 Full suite still green (31/31). No Firebase deploy needed.
 
+### 2026-09-17 — Media gallery: grid view + paged swipe viewer
+
+At the user's request: a new toolbar button (grid icon, next to the pairing-status button) opens `MediaGalleryView`, a square-thumbnail `LazyVGrid` of every photo/GIF in the conversation. Tapping a thumbnail opens `MediaPagerView`, a `TabView` in `.page` style so the user can swipe left/right between every media item in the conversation, not just the one they tapped.
+
+Refactored rather than duplicated: extracted the download-decrypt-cache pipeline out of `MediaMessageView.load()` into a shared `MediaDecryptor.decryptedImage(for:conversationId:)`, used by both the chat-bubble thumbnail and the new grid thumbnails/pager pages. Also extracted the pinch-zoom/pan gesture logic out of the formerly-private `FullscreenImageViewer` into a standalone `ZoomableImage`, and made `FullscreenImageViewer` itself non-private with an optional `pageInfo` label (e.g. "2 of 5") so the same zoom/pan/share chrome now serves both the single-image bubble viewer and each page of the gallery pager.
+
+The grid/pager is populated from `messagesService.messages` (already live-loaded for the open thread) filtered to `.image`/`.gif` types, excluding anything deleted-for-everyone or deleted-for-me — no new Firestore query, no rules changes, no Firebase deploy needed.
+
+Follow-up same day, per the user's request: tapping a media thumbnail directly in the chat thread (not just from the grid) now opens the same `MediaPagerView`, positioned at that message, instead of the old single-image `FullscreenImageViewer` — so swipe-to-prev/next works from both entry points. `ChatThreadView` now threads its `mediaMessages` list down through `MessageBubble` into `MediaMessageView`, which falls back to a single-item list if the message it's showing somehow isn't in that list (stale filter, edge case), so the viewer never ends up with zero pages.
+
+Full suite still green (31/31) after both changes — no regressions in the extracted decrypt/crypto/cache logic.
+
 ---
 
 ## Phase 11 — Hardening & QA

@@ -38,6 +38,7 @@ This project is open source (MIT) for anyone who wants to run their own instance
 - Non-GIF images are downscaled to a 4K (3840px) long edge and normalized to JPEG @ 95% before encryption — aspect ratio preserved, never upscaled
 - Decrypted media renders from an app-private sandbox only — never the system Photos library, until the user explicitly shares/saves it
 - Fullscreen viewer: pinch-to-zoom, drag-to-pan, and a Share button (system share sheet — AirDrop, Messages, Save Image, etc.)
+- Media gallery: a grid of square thumbnails for every photo/GIF in a conversation (toolbar button in the thread view), with a paged swipe viewer to move between them
 
 **UI**
 - WhatsApp-style chat list and thread views: bubbles, tails, date separators, live last-message previews and timestamps

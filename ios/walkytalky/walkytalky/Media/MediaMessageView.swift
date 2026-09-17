@@ -1,23 +1,37 @@
-import FirebaseStorage
 import SwiftUI
 
-/// Renders one media message bubble: downloads the ciphertext (once, then
-/// caches the decrypted bytes in `MediaStorage`), decrypts it with the
-/// matching `keyVersion` key, and displays it — from the app-private
-/// sandbox only, never the system Photos library. Shows a placeholder if
-/// the message pre-dates a re-pair and its key was discarded. Tapping the
-/// thumbnail opens a fullscreen viewer with zoom/pan and a share button —
-/// that share sheet's own "Save Image" action is how a decrypted photo
-/// reaches the system Photo Library now, so this view has no save button
-/// of its own.
+/// Renders one media message bubble: decrypts (via `MediaDecryptor`, which
+/// caches the plaintext in `MediaStorage`) and displays it — from the
+/// app-private sandbox only, never the system Photos library. Shows a
+/// placeholder if the message pre-dates a re-pair and its key was
+/// discarded. Tapping the thumbnail opens the same paged `MediaPagerView`
+/// used by the media grid, positioned at this message, so swiping left or
+/// right from here moves through the rest of the conversation's media —
+/// zoom/pan and a share button come along on every page too. That share
+/// sheet's own "Save Image" action is how a decrypted photo reaches the
+/// system Photo Library now, so this view has no save button of its own.
 struct MediaMessageView: View {
     let message: Message
     let conversationId: String
+    /// Every media message in the conversation, in thread order — lets the
+    /// fullscreen viewer opened from here page through all of them, not
+    /// just this one.
+    let mediaMessages: [Message]
 
     @State private var uiImage: UIImage?
-    @State private var isLoading = false
     @State private var errorText: String?
     @State private var showFullscreen = false
+
+    /// Falls back to just this message if the caller couldn't supply the
+    /// full list (or it's stale and no longer contains this message), so
+    /// the viewer always has at least one page to show.
+    private var pagerMessages: [Message] {
+        mediaMessages.contains { $0.id == message.id } ? mediaMessages : [message]
+    }
+
+    private var startIndex: Int {
+        pagerMessages.firstIndex { $0.id == message.id } ?? 0
+    }
 
     var body: some View {
         Group {
@@ -29,7 +43,7 @@ struct MediaMessageView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .onTapGesture { showFullscreen = true }
                     .fullScreenCover(isPresented: $showFullscreen) {
-                        FullscreenImageViewer(image: uiImage)
+                        MediaPagerView(messages: pagerMessages, conversationId: conversationId, startIndex: startIndex)
                     }
             } else if let errorText {
                 VStack(spacing: 4) {
@@ -49,128 +63,10 @@ struct MediaMessageView: View {
             }
         }
         .task(id: message.id) {
-            await load()
-        }
-    }
-
-    private func load() async {
-        guard let messageId = message.id else {
-            errorText = "Can't display this message"
-            return
-        }
-
-        if let cached = MediaStorage.read(messageId: messageId), let image = UIImage(data: cached) {
-            uiImage = image
-            return
-        }
-
-        guard !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
-
-        guard let storagePath = message.storagePath,
-              let nonce = message.nonce,
-              let keyVersion = message.keyVersion,
-              let key = ConversationKeyStore.key(conversationId: conversationId, keyVersion: keyVersion)
-        else {
-            errorText = "Can't decrypt this message"
-            return
-        }
-
-        do {
-            let ref = Storage.storage().reference(withPath: storagePath)
-            let downloaded = try await ref.data(maxSize: 25 * 1024 * 1024)
-            let decrypted = try MediaCrypto.decrypt(downloaded, nonceBase64: nonce, key: key)
-            try MediaStorage.write(decrypted, messageId: messageId)
-            uiImage = UIImage(data: decrypted)
-        } catch {
-            errorText = "Can't decrypt this message"
-        }
-    }
-}
-
-/// Fullscreen viewer: pinch to zoom, drag to pan while zoomed in, double-tap
-/// to toggle zoom, and a share button (top trailing) that hands the
-/// decrypted image to the system share sheet — AirDrop, Messages, Save
-/// Image, etc. all come from there for free.
-private struct FullscreenImageViewer: View {
-    let image: UIImage
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var scale: CGFloat = 1
-    @State private var lastScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .scaleEffect(scale)
-                .offset(offset)
-                .gesture(
-                    SimultaneousGesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                scale = max(1, lastScale * value)
-                            }
-                            .onEnded { _ in
-                                lastScale = scale
-                                if scale <= 1 {
-                                    withAnimation { resetTransform() }
-                                }
-                            },
-                        DragGesture()
-                            .onChanged { value in
-                                guard scale > 1 else { return }
-                                offset = CGSize(
-                                    width: lastOffset.width + value.translation.width,
-                                    height: lastOffset.height + value.translation.height
-                                )
-                            }
-                            .onEnded { _ in
-                                lastOffset = offset
-                            }
-                    )
-                )
-                .onTapGesture(count: 2) {
-                    withAnimation {
-                        if scale > 1 {
-                            resetTransform()
-                        } else {
-                            scale = 2
-                            lastScale = 2
-                        }
-                    }
-                }
-        }
-        .overlay(alignment: .top) {
-            HStack {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.white, .black.opacity(0.5))
-                }
-                Spacer()
-                ShareLink(
-                    item: Image(uiImage: image),
-                    preview: SharePreview("Photo", image: Image(uiImage: image))
-                ) {
-                    Image(systemName: "square.and.arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.white, .black.opacity(0.5))
-                }
+            uiImage = await MediaDecryptor.decryptedImage(for: message, conversationId: conversationId)
+            if uiImage == nil {
+                errorText = "Can't decrypt this message"
             }
-            .padding()
         }
-    }
-
-    private func resetTransform() {
-        scale = 1
-        lastScale = 1
-        offset = .zero
-        lastOffset = .zero
     }
 }

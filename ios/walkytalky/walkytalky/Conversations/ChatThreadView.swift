@@ -12,6 +12,7 @@ struct ChatThreadView: View {
     @State private var isPaired = false
     @State private var showCamera = false
     @State private var showGallery = false
+    @State private var showMediaGrid = false
     @State private var lastFailedUpload: (data: Data, type: MessageType)?
     @State private var sendErrorMessage: String?
 
@@ -28,6 +29,13 @@ struct ChatThreadView: View {
     /// viewer's own uid in `deletedFor` never renders for them, per spec.
     private var visibleMessages: [Message] {
         messagesService.messages.filter { !$0.deletedFor.contains(myUid) }
+    }
+
+    /// Every non-deleted photo/GIF in the conversation, oldest first —
+    /// matches thread order, so paging forward in the gallery moves toward
+    /// more recent media just like scrolling down the thread would.
+    private var mediaMessages: [Message] {
+        visibleMessages.filter { ($0.type == .image || $0.type == .gif) && !$0.deletedForEveryone }
     }
 
     private var threadRows: [ThreadRow] {
@@ -81,7 +89,8 @@ struct ChatThreadView: View {
                                     message: message,
                                     isMine: message.senderId == myUid,
                                     conversationId: conversation.id ?? "",
-                                    isReadByOther: otherUid.map { message.readBy.contains($0) } ?? false
+                                    isReadByOther: otherUid.map { message.readBy.contains($0) } ?? false,
+                                    mediaMessages: mediaMessages
                                 )
                                 .id(message.id)
                                 .onAppear { markReadIfNeeded(message) }
@@ -147,6 +156,13 @@ struct ChatThreadView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    showMediaGrid = true
+                } label: {
+                    Image(systemName: "square.grid.2x2")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
                     showPairing = true
                 } label: {
                     Image(systemName: isPaired ? "checkmark.shield" : "qrcode")
@@ -155,6 +171,9 @@ struct ChatThreadView: View {
         }
         .sheet(isPresented: $showPairing, onDismiss: refreshPairingState) {
             PairingView(conversation: conversation)
+        }
+        .sheet(isPresented: $showMediaGrid) {
+            MediaGalleryView(mediaMessages: mediaMessages, conversationId: conversation.id ?? "")
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraCaptureView(
@@ -327,6 +346,10 @@ private struct MessageBubble: View {
     /// Whether the other participant has this uid in `readBy`. Only
     /// meaningful (and only rendered) for messages this device sent.
     let isReadByOther: Bool
+    /// Passed through to `MediaMessageView` so its fullscreen viewer can
+    /// page through every media message in the conversation, not just
+    /// this bubble's own image.
+    let mediaMessages: [Message]
 
     var body: some View {
         HStack {
@@ -371,7 +394,7 @@ private struct MessageBubble: View {
 
             case .image, .gif:
                 VStack(alignment: .leading, spacing: 2) {
-                    MediaMessageView(message: message, conversationId: conversationId)
+                    MediaMessageView(message: message, conversationId: conversationId, mediaMessages: mediaMessages)
                     HStack(spacing: 4) {
                         Text(timeText)
                             .font(.caption2)
@@ -395,7 +418,7 @@ private struct MessageBubble: View {
     private func readReceiptIcon() -> some View {
         HStack(spacing: -5) {
             Image(systemName: "checkmark")
-            isReadByOther ? Image(systemName: "checkmark") : Image(systemName: "dot")
+            isReadByOther ? Image(systemName: "checkmark") : Image(systemName: "circle")
         }
         .font(.system(size: 9, weight: .bold))
         .foregroundStyle(Color.white)
