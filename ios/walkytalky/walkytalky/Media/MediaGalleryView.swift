@@ -72,7 +72,7 @@ private struct MediaGridThumbnail: View {
         GeometryReader { geo in
             Group {
                 if let media {
-                    MediaImageView(media: media)
+                    MediaImageView(media: media, showsPlaybackControl: true)
                         .scaledToFill()
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()

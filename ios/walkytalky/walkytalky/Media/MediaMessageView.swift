@@ -36,7 +36,7 @@ struct MediaMessageView: View {
     var body: some View {
         Group {
             if let media {
-                MediaImageView(media: media)
+                MediaImageView(media: media, showsPlaybackControl: true)
                     .scaledToFit()
                     .frame(maxWidth: 220, maxHeight: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12))

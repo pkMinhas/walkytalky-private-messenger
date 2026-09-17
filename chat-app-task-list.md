@@ -329,6 +329,14 @@ The user reported GIFs weren't animating anywhere. Two separate, compounding bug
 
 Added `GIFDecoderTests` (frame count, per-frame delay, the sub-0.02s-delay-clamps-to-0.1s convention real decoders use) and two `ImageSanitizerTests` regression cases (frame count and delay/loop-count survive `stripMetadata`) built on a shared real-GIF-container fixture helper. Full suite green (38/38). No Firebase deploy needed — purely client-side encode/decode/render.
 
+### 2026-09-17 — Play/pause control on GIF thumbnails
+
+At the user's request: an animated GIF's chat-bubble and grid thumbnails now show a small play/pause button overlaid in the corner (`MediaImageView`'s new `showsPlaybackControl` parameter, on for those two call sites, left off for the fullscreen pager since that wasn't asked for and already has its own zoom/pan/share chrome).
+
+`TimelineView` has no built-in pause, so playback position is tracked as accumulated elapsed time plus an in-progress play session, frozen and resumed only from the button's own tap handler — deliberately never mutated from inside the `TimelineView` closure itself, which SwiftUI re-invokes far more often than is safe to write state from. Pausing freezes on whichever frame was showing; resuming continues from that same phase rather than jumping.
+
+Full suite still green (38/38) — no new test added here since this is pure view-state/UI behavior with no non-trivial pure logic to isolate (the existing `GIFDecoderTests`/`ImageSanitizerTests` already cover the actual frame-timing math this button pauses and resumes). No Firebase deploy needed.
+
 ---
 
 ## Phase 11 — Hardening & QA
