@@ -204,7 +204,7 @@ struct ChatThreadView: View {
         // fall through to the system as normal — an in-app web browser
         // can't sensibly handle those anyway.
         .environment(\.openURL, OpenURLAction { url in
-            guard url.scheme == "http" || url.scheme == "https" else {
+            guard url.scheme?.lowercased() == "http" || url.scheme?.lowercased() == "https" else {
                 return .systemAction
             }
             browserURL = BrowserURL(url: url)
@@ -445,7 +445,7 @@ private struct MessageBubble: View {
             switch message.type {
             case .text:
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(LinkDetector.attributedString(from: message.decryptedText(conversationId: conversationId)))
+                    Text(LinkDetector.attributedString(from: message.decryptedText(conversationId: conversationId), fgColor: isMine ? Color.white : Color.primary))
                     HStack(spacing: 4) {
                         Text(timeText)
                             .font(.caption2)

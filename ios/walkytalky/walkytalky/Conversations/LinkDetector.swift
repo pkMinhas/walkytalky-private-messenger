@@ -9,7 +9,7 @@ import SwiftUI
 enum LinkDetector {
     private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
-    static func attributedString(from text: String) -> AttributedString {
+    static func attributedString(from text: String, fgColor: Color) -> AttributedString {
         var attributed = AttributedString(text)
         guard let detector else { return attributed }
 
@@ -18,7 +18,7 @@ enum LinkDetector {
             guard let url = match.url, let range = Range(match.range, in: attributed) else { continue }
             attributed[range].link = url
             attributed[range].underlineStyle = .single
-            attributed[range].foregroundColor = .white
+            attributed[range].foregroundColor = fgColor
         }
         return attributed
     }
