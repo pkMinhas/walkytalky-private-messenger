@@ -147,6 +147,14 @@ struct ChatThreadView: View {
                 .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
+
+            if noFaceModeEnabled {
+                Text("Enhanced privacy: images will have faces blurred before sending")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
         }
         .alert("Couldn't Send", isPresented: sendErrorBinding) {
             Button("OK") { sendErrorMessage = nil }
@@ -167,8 +175,8 @@ struct ChatThreadView: View {
                 Button {
                     toggleNoFaceMode()
                 } label: {
-                    VStack {
-                        Image(systemName: noFaceModeEnabled ? "face.dashed.fill" : "face.dashed")
+                    ZStack {
+                        Image(systemName: "face.dashed")
                         if noFaceModeEnabled {
                             Image(systemName: "slash.circle")
                         }

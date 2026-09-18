@@ -446,6 +446,12 @@ At the user's request: `LinkDetector` now sets `.foregroundColor = .blue` on a d
 
 Full suite still green (57/57). No Firebase deploy needed.
 
+### 2026-09-18 — Compose-bar subtitle when No Face mode is on
+
+At the user's request: `ChatThreadView`'s compose bar shows a caption below it — "Enhanced privacy: images will have faces blurred before sending" — whenever No Face mode is enabled for that conversation, so the effect isn't silent/discoverable only via the toolbar icon's fill state. Hidden entirely (no reserved space) when the mode is off, matching the existing `uploadStatusBar`'s conditional-visibility pattern in the same view.
+
+Full suite still green (57/57). No Firebase deploy needed.
+
 ---
 
 ## Phase 11 — Hardening & QA
