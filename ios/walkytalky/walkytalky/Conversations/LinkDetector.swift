@@ -18,6 +18,7 @@ enum LinkDetector {
             guard let url = match.url, let range = Range(match.range, in: attributed) else { continue }
             attributed[range].link = url
             attributed[range].underlineStyle = .single
+            attributed[range].foregroundColor = .white
         }
         return attributed
     }

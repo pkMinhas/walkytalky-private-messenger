@@ -440,6 +440,12 @@ At the user's request: reverted the ellipse/`CIBlendWithMask` change from immedi
 
 Full suite still green (57/57). No Firebase deploy needed.
 
+### 2026-09-18 — Message links now render blue, not just underlined
+
+At the user's request: `LinkDetector` now sets `.foregroundColor = .blue` on a detected link's range, alongside the existing underline. Previously link color deliberately inherited the bubble's own text color (white on sent, primary on received) to sidestep a contrast worry against the sent-bubble's accent-color background — checked `Assets.xcassets/AccentColor.colorset` and that background is actually a teal (R 0.153 / G 0.596 / B 0.541), not blue, so blue link text reads fine against it.
+
+Full suite still green (57/57). No Firebase deploy needed.
+
 ---
 
 ## Phase 11 — Hardening & QA

@@ -167,7 +167,13 @@ struct ChatThreadView: View {
                 Button {
                     toggleNoFaceMode()
                 } label: {
-                    Image(systemName: noFaceModeEnabled ? "face.dashed.fill" : "face.dashed")
+                    VStack {
+                        Image(systemName: noFaceModeEnabled ? "face.dashed.fill" : "face.dashed")
+                        if noFaceModeEnabled {
+                            Image(systemName: "slash.circle")
+                        }
+                    }
+                    
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -440,7 +446,7 @@ private struct MessageBubble: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         if isMine {
-                            readReceiptIcon()
+                            readReceiptIcon(fgColor: .secondary)
                         }
                     }
                 }
@@ -456,7 +462,7 @@ private struct MessageBubble: View {
     /// checkmark once sent, a second one once the other participant's uid
     /// appears in `readBy`.
     @ViewBuilder
-    private func readReceiptIcon() -> some View {
+    private func readReceiptIcon(fgColor : Color = .white) -> some View {
         HStack(spacing: -5) {
             Image(systemName: "checkmark")
             if isReadByOther {
@@ -464,7 +470,7 @@ private struct MessageBubble: View {
             }
         }
         .font(.system(size: 9, weight: .bold))
-        .foregroundStyle(Color.white)
+        .foregroundStyle(fgColor)
         .accessibilityLabel(isReadByOther ? "Read" : "Sent")
     }
 
