@@ -13,8 +13,14 @@ final class PasscodeService: ObservableObject {
     @Published private(set) var isLocked: Bool
     @Published private(set) var lockoutRemaining: TimeInterval = 0
 
-    /// Lockout duration after the Nth consecutive failed attempt (index 0 = 1st failure).
-    /// The last value repeats as a cap for further failures.
+    /// The first two wrong guesses get an immediate retry with no delay;
+    /// the third consecutive failure (and every one after) starts the
+    /// exponential curve below, at its first tier.
+    static let attemptsBeforeLockout = 3
+
+    /// Lockout duration once `attemptsBeforeLockout` is reached (index 0 =
+    /// the triggering Nth failure). The last value repeats as a cap for
+    /// further failures.
     /// TODO(HUMAN): confirm this curve — task list default is 5s, 30s, 2min, 10min, 30min cap.
     static let lockoutDelays: [TimeInterval] = [5, 30, 120, 600, 1800]
 
@@ -38,9 +44,15 @@ final class PasscodeService: ObservableObject {
 
     // MARK: - Setup / change
 
-    func setPasscode(_ digits: String) {
+    func setPasscode(_ digits: String) async {
         let salt = PBKDF2.randomSalt()
-        let hash = PBKDF2.hash(password: digits, salt: salt)
+        // 100k PBKDF2 iterations is real, noticeable CPU work — detached so
+        // it never runs on (and blocks) the main actor this class is
+        // pinned to. See `PBKDF2`'s doc comment for why `nonisolated`
+        // alone isn't enough to achieve that on its own.
+        let hash = await Task.detached(priority: .userInitiated) {
+            PBKDF2.hash(password: digits, salt: salt)
+        }.value
         KeychainService.save(salt, account: saltAccount)
         KeychainService.save(hash, account: hashAccount)
         resetFailedAttempts()
@@ -53,13 +65,15 @@ final class PasscodeService: ObservableObject {
     var isLockedOut: Bool { lockoutRemaining > 0 }
 
     @discardableResult
-    func verify(_ digits: String) -> Bool {
+    func verify(_ digits: String) async -> Bool {
         guard !isLockedOut,
               let salt = KeychainService.load(account: saltAccount),
               let storedHash = KeychainService.load(account: hashAccount)
         else { return false }
 
-        let candidate = PBKDF2.hash(password: digits, salt: salt)
+        let candidate = await Task.detached(priority: .userInitiated) {
+            PBKDF2.hash(password: digits, salt: salt)
+        }.value
         let success = PBKDF2.constantTimeEquals(candidate, storedHash)
         if success {
             resetFailedAttempts()
@@ -73,8 +87,11 @@ final class PasscodeService: ObservableObject {
     private func registerFailedAttempt() {
         let attempts = failedAttempts + 1
         saveFailedAttempts(attempts)
-        let delay = Self.lockoutDelays[min(attempts - 1, Self.lockoutDelays.count - 1)]
-        saveLockoutUntil(Date().addingTimeInterval(delay))
+        if attempts >= Self.attemptsBeforeLockout {
+            let tier = attempts - Self.attemptsBeforeLockout
+            let delay = Self.lockoutDelays[min(tier, Self.lockoutDelays.count - 1)]
+            saveLockoutUntil(Date().addingTimeInterval(delay))
+        }
         refreshLockoutCountdown()
     }
 

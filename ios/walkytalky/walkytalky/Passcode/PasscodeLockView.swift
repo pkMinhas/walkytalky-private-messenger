@@ -6,6 +6,7 @@ struct PasscodeLockView: View {
     @EnvironmentObject private var passcodeService: PasscodeService
     @State private var digits = ""
     @State private var showIncorrect = false
+    @State private var isProcessing = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -16,6 +17,10 @@ struct PasscodeLockView: View {
                 .font(.headline)
             PasscodeEntryView(digits: $digits, isDisabled: passcodeService.isLockedOut)
                 .frame(height: 44)
+            
+            if isProcessing {
+                ProgressView()
+            }
 
             if passcodeService.isLockedOut {
                 Text("Too many attempts. Try again in \(countdownText).")
@@ -31,9 +36,15 @@ struct PasscodeLockView: View {
         .padding()
         .onChange(of: digits) { _, newValue in
             guard newValue.count == 6 else { return }
-            let success = passcodeService.verify(newValue)
-            showIncorrect = !success
-            digits = ""
+            let candidate = newValue
+            isProcessing = true
+            Task {
+                let success = await passcodeService.verify(candidate)
+                showIncorrect = !success
+                digits = ""
+                isProcessing = false
+            }
+            
         }
     }
 

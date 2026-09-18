@@ -39,7 +39,10 @@ struct PasscodeSetupView: View {
                 step = .confirm
             case .confirm:
                 if newValue == firstEntry {
-                    passcodeService.setPasscode(newValue)
+                    let candidate = newValue
+                    Task {
+                        await passcodeService.setPasscode(candidate)
+                    }
                 } else {
                     errorMessage = "Passcodes didn't match. Try again."
                     firstEntry = ""

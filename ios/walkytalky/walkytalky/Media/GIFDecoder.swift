@@ -1,5 +1,6 @@
 import ImageIO
 import UIKit
+import UniformTypeIdentifiers
 
 /// A decoded image ready for display: either a single static frame, or
 /// every frame of an animated GIF plus its own per-frame delay. Produced by
@@ -66,5 +67,36 @@ nonisolated enum GIFDecoder {
         let clamped = gifProperties[kCGImagePropertyGIFDelayTime as String] as? TimeInterval
         let delay = unclamped ?? clamped ?? 0.1
         return delay < 0.02 ? 0.1 : delay
+    }
+
+    /// The inverse of `decode(_:)` — re-encodes a frame+delay sequence back
+    /// into real GIF container bytes. Used by `FaceBlurService` to rebuild
+    /// a GIF after blurring each frame individually, since Vision/CoreImage
+    /// operate on plain `UIImage`s, not the GIF container itself.
+    static func encode(frames: [UIImage], delays: [TimeInterval]) -> Data? {
+        guard !frames.isEmpty, frames.count == delays.count else { return nil }
+
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output, UTType.gif.identifier as CFString, frames.count, nil
+        ) else { return nil }
+
+        // Loop forever, matching how GIFs are conventionally authored when
+        // there's no source loop count to preserve (we're building this GIF
+        // fresh from frames, not copying an existing container).
+        CGImageDestinationSetProperties(destination, [
+            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: 0],
+        ] as CFDictionary)
+
+        for (frame, delay) in zip(frames, delays) {
+            guard let cgImage = frame.cgImage else { return nil }
+            let frameProperties: [String: Any] = [
+                kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: delay],
+            ]
+            CGImageDestinationAddImage(destination, cgImage, frameProperties as CFDictionary)
+        }
+
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return output as Data
     }
 }

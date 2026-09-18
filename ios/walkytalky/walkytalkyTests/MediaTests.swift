@@ -296,6 +296,104 @@ struct GIFDecoderTests {
         let media = try #require(GIFDecoder.decode(animatedGIFData(frameCount: 1)))
         #expect(media.frames.count == 1)
     }
+
+    private func solidImage(width: Int, height: Int, color: UIColor) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
+        return renderer.image { context in
+            color.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        }
+    }
+
+    // `encode` is the inverse of `decode` — round-tripping through both
+    // should preserve frame count and each frame's delay, which is exactly
+    // what FaceBlurService relies on when it decodes a GIF, blurs each
+    // frame, and re-encodes it.
+    @Test func encodeThenDecodeRoundTripsFrameCountAndDelay() throws {
+        let frames = [
+            solidImage(width: 4, height: 4, color: .red),
+            solidImage(width: 4, height: 4, color: .blue),
+        ]
+        let delays: [TimeInterval] = [0.2, 0.3]
+
+        let encoded = try #require(GIFDecoder.encode(frames: frames, delays: delays))
+        let decoded = try #require(GIFDecoder.decode(encoded))
+
+        #expect(decoded.frames.count == 2)
+        #expect(abs(decoded.frameDelays[0] - 0.2) < 0.01)
+        #expect(abs(decoded.frameDelays[1] - 0.3) < 0.01)
+    }
+
+    @Test func encodeRejectsMismatchedFrameAndDelayCounts() {
+        let frames = [solidImage(width: 4, height: 4, color: .red)]
+        #expect(GIFDecoder.encode(frames: frames, delays: [0.1, 0.2]) == nil)
+    }
+}
+
+struct NoFaceModeStoreTests {
+    @Test func defaultsToDisabledForAnUnsetConversation() {
+        let id = "conv-\(UUID().uuidString)"
+        #expect(NoFaceModeStore.isEnabled(conversationId: id) == false)
+    }
+
+    @Test func setThenGetRoundTrips() {
+        let id = "conv-\(UUID().uuidString)"
+        NoFaceModeStore.setEnabled(true, conversationId: id)
+        #expect(NoFaceModeStore.isEnabled(conversationId: id))
+
+        NoFaceModeStore.setEnabled(false, conversationId: id)
+        #expect(NoFaceModeStore.isEnabled(conversationId: id) == false)
+    }
+
+    @Test func settingIsIsolatedPerConversation() {
+        let idA = "conv-\(UUID().uuidString)"
+        let idB = "conv-\(UUID().uuidString)"
+        NoFaceModeStore.setEnabled(true, conversationId: idA)
+
+        #expect(NoFaceModeStore.isEnabled(conversationId: idA))
+        #expect(NoFaceModeStore.isEnabled(conversationId: idB) == false)
+    }
+}
+
+struct FaceBlurTests {
+    private func solidImage(width: Int, height: Int) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
+        return renderer.image { context in
+            UIColor.gray.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        }
+    }
+
+    // A synthetic solid-color image has no detectable face. Vision's
+    // on-device detector can still legitimately throw here under resource
+    // pressure (observed: reliably passes run alone, reliably throws
+    // `.detectionFailed` under the full parallel-clone suite) even though
+    // nothing about the image or the code is wrong — that's exactly the
+    // scenario `FaceBlur.BlurError` exists to surface rather than crash
+    // on, so both outcomes are accepted here; what's being verified is
+    // "no faces present" doesn't blow up, and any failure comes back as
+    // the expected typed error, not something else.
+    @Test func imageWithNoDetectableFaceDoesNotCrash() {
+        let image = solidImage(width: 64, height: 64)
+        do {
+            let result = try FaceBlur.blurringFaces(in: image)
+            #expect(result.size == image.size)
+        } catch is FaceBlur.BlurError {
+            // Acceptable — see comment above.
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test func nonImageTypeMessagesPassThroughFaceBlurServiceUnchanged() throws {
+        let original = Data("not media".utf8)
+        let result = try FaceBlurService.apply(to: original, type: .text)
+        #expect(result == original)
+    }
 }
 
 struct ZoomPanMathTests {

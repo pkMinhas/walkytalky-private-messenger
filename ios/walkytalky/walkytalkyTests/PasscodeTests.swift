@@ -61,47 +61,64 @@ struct PasscodeServiceTests {
         #expect(service.hasPasscode == false)
     }
 
-    @Test func setThenVerifyCorrectPasscodeSucceeds() {
+    @Test func setThenVerifyCorrectPasscodeSucceeds() async {
         let service = freshService()
-        service.setPasscode("123456")
+        await service.setPasscode("123456")
         #expect(service.hasPasscode)
         #expect(service.isLocked == false)
-        #expect(service.verify("123456"))
+        #expect(await service.verify("123456"))
     }
 
-    @Test func verifyWrongPasscodeFailsAndStartsLockout() {
+    @Test func firstTwoWrongAttemptsDoNotTriggerLockout() async {
         let service = freshService()
-        service.setPasscode("123456")
-        #expect(service.verify("000000") == false)
-        // First failure uses lockoutDelays[0] == 5s.
+        await service.setPasscode("123456")
+        #expect(await service.verify("000000") == false)
+        #expect(service.isLockedOut == false)
+        #expect(await service.verify("111111") == false)
+        #expect(service.isLockedOut == false)
+    }
+
+    @Test func thirdWrongAttemptTriggersLockout() async {
+        let service = freshService()
+        await service.setPasscode("123456")
+        _ = await service.verify("000000") // 1st failure — no lockout yet
+        _ = await service.verify("111111") // 2nd failure — no lockout yet
+        #expect(await service.verify("222222") == false) // 3rd failure -> locked out
+        // Third failure uses lockoutDelays[0] == 5s.
         #expect(service.isLockedOut)
         #expect(service.lockoutRemaining > 0 && service.lockoutRemaining <= 5)
     }
 
-    @Test func lockoutBlocksFurtherAttemptsWithoutCountingThem() {
+    @Test func lockoutBlocksFurtherAttemptsWithoutCountingThem() async {
         let service = freshService()
-        service.setPasscode("123456")
-        _ = service.verify("000000") // 1st failure -> locked out ~5s
+        await service.setPasscode("123456")
+        _ = await service.verify("000000") // 1st failure
+        _ = await service.verify("111111") // 2nd failure
+        _ = await service.verify("222222") // 3rd failure -> locked out ~5s
         #expect(service.isLockedOut)
         // Even the *correct* passcode is rejected while locked out.
-        #expect(service.verify("123456") == false)
+        #expect(await service.verify("123456") == false)
     }
 
     @Test func successfulUnlockResetsTheDelayCurve() async {
         let service = freshService()
-        service.setPasscode("123456")
-        _ = service.verify("000000") // 1st failure: ~5s lockout
+        await service.setPasscode("123456")
+        _ = await service.verify("000000") // 1st failure
+        _ = await service.verify("111111") // 2nd failure
+        _ = await service.verify("222222") // 3rd failure: ~5s lockout
         // Wait out the short first-tier lockout so we can unlock and re-check the curve.
         try? await Task.sleep(for: .seconds(6))
         #expect(service.isLockedOut == false)
-        #expect(service.verify("123456")) // resets failed-attempt counter
-        #expect(service.verify("000000") == false) // next failure should be back at tier 1 (~5s), not tier 2 (~30s)
+        #expect(await service.verify("123456")) // resets failed-attempt counter
+        _ = await service.verify("000000") // 1st failure again
+        _ = await service.verify("111111") // 2nd failure again
+        #expect(await service.verify("222222") == false) // 3rd failure -> back at tier 1 (~5s), not tier 2 (~30s)
         #expect(service.lockoutRemaining <= 5)
     }
 
-    @Test func backgroundingLocksImmediatelyWithNoGracePeriod() {
+    @Test func backgroundingLocksImmediatelyWithNoGracePeriod() async {
         let service = freshService()
-        service.setPasscode("123456")
+        await service.setPasscode("123456")
         #expect(service.isLocked == false)
 
         service.handleScenePhaseChange(.background)
@@ -116,9 +133,9 @@ struct PasscodeServiceTests {
         #expect(service.isLocked == false) // nothing to lock yet
     }
 
-    @Test func returningToForegroundDoesNotUnlockOnItsOwn() {
+    @Test func returningToForegroundDoesNotUnlockOnItsOwn() async {
         let service = freshService()
-        service.setPasscode("123456")
+        await service.setPasscode("123456")
         service.handleScenePhaseChange(.background)
         #expect(service.isLocked)
 

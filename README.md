@@ -20,7 +20,7 @@ This project is open source (MIT) for anyone who wants to run their own instance
 - Anonymous sign-in (Firebase Auth) — no email, no phone number, no personal identifiers required
 - Single-device enforcement: an account can only be active on one device at a time, tracked via a Firestore transaction
 - Local 6-digit passcode lock, hashed with PBKDF2-HMAC-SHA256 (100k iterations, per-device random salt) and stored only in the iOS Keychain — never Firestore, never plaintext
-- Exponential lockout after failed passcode attempts (5s / 30s / 2min / 10min / 30min cap), state kept in the Keychain so it survives an app kill
+- Exponential lockout after failed passcode attempts — the first two wrong guesses get an immediate retry, the third (and every one after) starts the curve (5s / 30s / 2min / 10min / 30min cap), state kept in the Keychain so it survives an app kill
 - The app locks immediately when minimized — no grace period
 
 **Messaging**
@@ -31,6 +31,7 @@ This project is open source (MIT) for anyone who wants to run their own instance
 - Delete for me / delete for everyone (sender-only, unrestricted by time), with tombstoned "This message was deleted" bubbles
 - Read receipts (double-checkmark, sender's own messages only)
 - Admin-assignable per-conversation display names, since accounts have no profile/email to show
+- Links in messages are tappable and open in a private in-app browser (`WKWebView` with a non-persistent data store) instead of Safari — cookies, cache, and history live only in memory for that one page view and are never written to disk or shared with the system's Safari history
 
 **Media**
 - Photo capture (camera) and picking (photo library), plus GIFs
@@ -39,6 +40,7 @@ This project is open source (MIT) for anyone who wants to run their own instance
 - Decrypted media renders from an app-private sandbox only — never the system Photos library, until the user explicitly shares/saves it
 - Fullscreen viewer: pinch-to-zoom, drag-to-pan, and a Share button (system share sheet — AirDrop, Messages, Save Image, etc.)
 - Media gallery: a grid of square thumbnails for every photo/GIF in a conversation (toolbar button in the thread view), with a paged swipe viewer to move between them
+- "No Face" mode: an optional per-conversation toggle (toolbar button) that runs on-device face detection (Vision) and blurs every detected face in a photo/GIF before it's encrypted and sent. Purely local to the device that enables it — not synced to Firestore, not visible to the other participant, has no effect on media they send. Fails closed: if blurring itself fails while the mode is on, the send is aborted rather than uploading an unprotected original
 
 **UI**
 - WhatsApp-style chat list and thread views: bubbles, tails, date separators, live last-message previews and timestamps

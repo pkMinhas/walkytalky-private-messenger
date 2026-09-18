@@ -42,13 +42,19 @@ struct ChangePasscodeView: View {
             guard newValue.count == 6 else { return }
             switch step {
             case .verifyCurrent:
-                if passcodeService.verify(newValue) {
-                    errorMessage = nil
-                    step = .enterNew
-                } else {
-                    errorMessage = "Incorrect passcode"
+                let candidate = newValue
+                
+                Task {
+                    defer {
+                        digits = ""
+                    }
+                    if await passcodeService.verify(candidate) {
+                        errorMessage = nil
+                        step = .enterNew
+                    } else {
+                        errorMessage = "Incorrect passcode"
+                    }
                 }
-                digits = ""
             case .enterNew:
                 firstNewEntry = newValue
                 digits = ""
@@ -56,8 +62,11 @@ struct ChangePasscodeView: View {
                 step = .confirmNew
             case .confirmNew:
                 if newValue == firstNewEntry {
-                    passcodeService.setPasscode(newValue)
-                    dismiss()
+                    let candidate = newValue
+                    Task {
+                        await passcodeService.setPasscode(candidate)
+                        dismiss()
+                    }
                 } else {
                     errorMessage = "Passcodes didn't match. Try again."
                     digits = ""

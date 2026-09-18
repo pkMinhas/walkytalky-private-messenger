@@ -6,6 +6,7 @@ struct ChatListView: View {
     @StateObject private var conversationsService = ConversationsService()
     @State private var showChangePasscode = false
     @State private var showMyUserID = false
+    @State private var showAbout = false
 
     private var myUid: String {
         if case .signedIn(let uid) = authService.authState { return uid }
@@ -41,6 +42,7 @@ struct ChatListView: View {
                     Menu {
                         Button("My User ID") { showMyUserID = true }
                         Button("Change Passcode") { showChangePasscode = true }
+                        Button("About") { showAbout = true }
                         Button("Sign Out", role: .destructive) {
                             Task { await authService.signOut() }
                         }
@@ -54,6 +56,9 @@ struct ChatListView: View {
             }
             .sheet(isPresented: $showMyUserID) {
                 MyUserIDView(uid: myUid)
+            }
+            .sheet(isPresented: $showAbout) {
+                AboutView()
             }
         }
         .onAppear {

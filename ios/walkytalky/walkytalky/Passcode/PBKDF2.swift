@@ -5,7 +5,15 @@ import Foundation
 /// (CryptoKit has no PBKDF2 API of its own). Used to turn a 6-digit
 /// passcode plus a per-device random salt into a Keychain-storable hash —
 /// never the raw passcode.
-enum PBKDF2 {
+///
+/// `nonisolated`: pure, stateless computation with no UI-thread
+/// requirement. `PasscodeService` (which calls this) runs it inside
+/// `Task.detached` specifically so 100k HMAC iterations never block the
+/// main actor — `nonisolated` alone doesn't move work off the main thread,
+/// but it's required for a `Task.detached` closure to be able to call this
+/// at all under the project's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`
+/// setting, which would otherwise pin this to the main actor by default.
+nonisolated enum PBKDF2 {
     /// Cost tuned for a PIN that gets verified on every foreground/unlock:
     /// high enough to slow offline brute force of a leaked hash, low enough
     /// to feel instant (well under 100ms on any supported device).

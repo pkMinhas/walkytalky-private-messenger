@@ -121,8 +121,11 @@ enum ImageSanitizer {
 
     /// Bakes `imageOrientation` into the pixel buffer via drawing (which
     /// respects it, unlike the raw buffer itself), so the result no longer
-    /// depends on an EXIF tag to display correctly.
-    private static func normalizedCGImage(from image: UIImage) -> CGImage? {
+    /// depends on an EXIF tag to display correctly. Not private: `FaceBlur`
+    /// reuses this so Vision's face rectangles and the pixel buffer it
+    /// draws onto are always in the same (upright) coordinate space,
+    /// rather than re-deriving this orientation-handling a second time.
+    static func normalizedCGImage(from image: UIImage) -> CGImage? {
         guard image.imageOrientation != .up else { return image.cgImage }
 
         let format = UIGraphicsImageRendererFormat()

@@ -13,6 +13,8 @@ struct ChatThreadView: View {
     @State private var showCamera = false
     @State private var showGallery = false
     @State private var showMediaGrid = false
+    @State private var noFaceModeEnabled = false
+    @State private var browserURL: BrowserURL?
     @State private var lastFailedUpload: (data: Data, type: MessageType)?
     @State private var sendErrorMessage: String?
 
@@ -163,17 +165,39 @@ struct ChatThreadView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    toggleNoFaceMode()
+                } label: {
+                    Image(systemName: noFaceModeEnabled ? "face.dashed.fill" : "face.dashed")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
                     showPairing = true
                 } label: {
                     Image(systemName: isPaired ? "checkmark.shield" : "qrcode")
                 }
             }
         }
+        // Scoped to this conversation, not app-wide: links tapped in a
+        // message bubble get routed to the private in-app browser instead
+        // of the system browser. Non-http(s) schemes (mailto:, tel:, etc.)
+        // fall through to the system as normal — an in-app web browser
+        // can't sensibly handle those anyway.
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == "http" || url.scheme == "https" else {
+                return .systemAction
+            }
+            browserURL = BrowserURL(url: url)
+            return .handled
+        })
         .sheet(isPresented: $showPairing, onDismiss: refreshPairingState) {
             PairingView(conversation: conversation)
         }
         .sheet(isPresented: $showMediaGrid) {
             MediaGalleryView(mediaMessages: mediaMessages, conversationId: conversation.id ?? "")
+        }
+        .fullScreenCover(item: $browserURL) { wrapper in
+            InAppBrowserView(url: wrapper.url)
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraCaptureView(
@@ -201,6 +225,7 @@ struct ChatThreadView: View {
             guard let id = conversation.id else { return }
             messagesService.startListening(conversationId: id)
             refreshPairingState()
+            noFaceModeEnabled = NoFaceModeStore.isEnabled(conversationId: id)
         }
         .onDisappear {
             messagesService.stopListening()
@@ -213,6 +238,16 @@ struct ChatThreadView: View {
             return
         }
         isPaired = ConversationKeyStore.currentKey(conversationId: id) != nil
+    }
+
+    /// No Face mode is local to this device — toggling it here only
+    /// changes how *this device* processes media it sends going forward;
+    /// it isn't synced to Firestore and the other participant has no way
+    /// to see or affect it.
+    private func toggleNoFaceMode() {
+        guard let id = conversation.id else { return }
+        noFaceModeEnabled.toggle()
+        NoFaceModeStore.setEnabled(noFaceModeEnabled, conversationId: id)
     }
 
     private func send() {
@@ -305,6 +340,11 @@ struct ChatThreadView: View {
     }
 }
 
+private struct BrowserURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
 private enum ThreadRow: Identifiable {
     case message(Message)
     case daySeparator(Date)
@@ -376,7 +416,7 @@ private struct MessageBubble: View {
             switch message.type {
             case .text:
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(message.decryptedText(conversationId: conversationId))
+                    Text(LinkDetector.attributedString(from: message.decryptedText(conversationId: conversationId)))
                     HStack(spacing: 4) {
                         Text(timeText)
                             .font(.caption2)
@@ -412,13 +452,16 @@ private struct MessageBubble: View {
         return date.formatted(date: .omitted, time: .shortened)
     }
 
-    /// Double-checkmark read receipt, shown only on the sender's own
-    /// messages: dim/gray while unread, blue once the other participant's
-    /// uid appears in `readBy`.
+    /// Read receipt, shown only on the sender's own messages: a single
+    /// checkmark once sent, a second one once the other participant's uid
+    /// appears in `readBy`.
+    @ViewBuilder
     private func readReceiptIcon() -> some View {
         HStack(spacing: -5) {
             Image(systemName: "checkmark")
-            isReadByOther ? Image(systemName: "checkmark") : Image(systemName: "circle")
+            if isReadByOther {
+                Image(systemName: "checkmark")
+            }
         }
         .font(.system(size: 9, weight: .bold))
         .foregroundStyle(Color.white)
