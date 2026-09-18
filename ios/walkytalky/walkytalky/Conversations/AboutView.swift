@@ -1,10 +1,17 @@
 import SwiftUI
+import UserNotifications
 
 /// App identity plus links to the developer's site and GitHub profile,
 /// opened externally via `Link` (Safari/the system browser) — this view
 /// never fetches or embeds either page itself.
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
+
+    #if DEBUG
+    @State private var authorizationStatus: UNAuthorizationStatus?
+    @State private var debugTriggerResult: String?
+    @State private var isRunningDebugTrigger = false
+    #endif
 
     private var appVersion: String {
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -45,6 +52,10 @@ struct AboutView: View {
                 }
                 .padding(.horizontal, 32)
 
+                #if DEBUG
+                debugBackgroundCheckSection
+                #endif
+
                 Spacer()
             }
             .padding(.vertical)
@@ -55,9 +66,81 @@ struct AboutView: View {
                     Button("Close") { dismiss() }
                 }
             }
+            #if DEBUG
+            .task {
+                authorizationStatus = await BackgroundMessageChecker.authorizationStatus()
+            }
+            #endif
+        }
+    }
+
+    #if DEBUG
+    /// Debug-only: lets the check-and-notify logic be exercised directly
+    /// instead of waiting on iOS's own opportunistic `BGAppRefreshTask`
+    /// scheduling, which can take hours or (in the Simulator, without the
+    /// `_simulateLaunchForTaskWithIdentifier:` LLDB command) never happen
+    /// at all — useful for telling apart "the code is broken" from "iOS
+    /// just hasn't run it yet."
+    @ViewBuilder
+    private var debugBackgroundCheckSection: some View {
+        VStack(spacing: 8) {
+            Divider()
+            Text("Debug: Background Message Check")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if let authorizationStatus {
+                Text("Notification permission: \(authorizationStatus.debugDescription)")
+                    .font(.caption)
+                    .foregroundStyle(authorizationStatus == .authorized ? Color.secondary : Color.red)
+            }
+
+            Button {
+                isRunningDebugTrigger = true
+                debugTriggerResult = nil
+                Task {
+                    let foundNew = await BackgroundMessageChecker.debugTriggerNow()
+                    debugTriggerResult = foundNew
+                        ? "Found a new message — notification posted."
+                        : "No new messages found since the last checkpoint."
+                    isRunningDebugTrigger = false
+                }
+            } label: {
+                if isRunningDebugTrigger {
+                    ProgressView()
+                } else {
+                    Text("Trigger Background Check Now")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isRunningDebugTrigger)
+
+            if let debugTriggerResult {
+                Text(debugTriggerResult)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.horizontal, 32)
+    }
+    #endif
+}
+
+#if DEBUG
+extension UNAuthorizationStatus {
+    fileprivate var debugDescription: String {
+        switch self {
+        case .authorized: "authorized"
+        case .denied: "denied"
+        case .notDetermined: "not determined"
+        case .provisional: "provisional"
+        case .ephemeral: "ephemeral"
+        @unknown default: "unknown"
         }
     }
 }
+#endif
 
 #Preview {
     AboutView()

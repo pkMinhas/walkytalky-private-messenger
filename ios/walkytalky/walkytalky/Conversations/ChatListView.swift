@@ -64,6 +64,13 @@ struct ChatListView: View {
         .onAppear {
             guard !myUid.isEmpty else { return }
             conversationsService.startListening(uid: myUid)
+            // The chat list is now showing live data, so nothing up to
+            // this point should later surface as a background-check
+            // notification — and now that there's something to check for,
+            // request permission and queue the first opportunistic check.
+            BackgroundMessageChecker.markSeenNow()
+            BackgroundMessageChecker.requestNotificationAuthorization()
+            BackgroundMessageChecker.scheduleNextRefresh()
         }
     }
 }

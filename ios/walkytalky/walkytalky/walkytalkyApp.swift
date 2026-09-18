@@ -22,6 +22,10 @@ struct walkytalkyApp: App {
     init() {
         FirebaseApp.configure()
         _authService = StateObject(wrappedValue: AuthService())
+        // Must happen before the app finishes launching, per BGTaskScheduler's
+        // own requirement — registering it any later means iOS never learns
+        // the task exists.
+        BackgroundMessageChecker.registerTask()
     }
 
     var body: some Scene {

@@ -32,6 +32,7 @@ This project is open source (MIT) for anyone who wants to run their own instance
 - Read receipts (double-checkmark, sender's own messages only)
 - Admin-assignable per-conversation display names, since accounts have no profile/email to show
 - Links in messages are tappable and open in a private in-app browser (`WKWebView` with a non-persistent data store) instead of Safari — cookies, cache, and history live only in memory for that one page view and are never written to disk or shared with the system's Safari history
+- Occasional background check for new messages (`BGTaskScheduler`), posting a local notification — always the fixed text "You have a new message," never a preview, since this check never decrypts anything. Deliberately not real push: Push Notifications is one of the capabilities Apple gates behind a paid Apple Developer Program membership, which would contradict this project's free-Apple-ID self-hosting promise below. The tradeoff is real — iOS gives this no guaranteed schedule (opportunistic, can be delayed hours, and is cancelled if the user force-quits the app) — see [Known limitations](#known-limitations)
 
 **Media**
 - Photo capture (camera) and picking (photo library or the Files app — iCloud Drive, "On My iPhone," any other file provider), plus GIFs
@@ -173,6 +174,7 @@ firebase/
 
 - **Two participants per conversation, by design.** The E2E encryption is a single AES key derived from a pairwise ECDH exchange — it mathematically cannot extend past two people without a different key-agreement scheme (e.g. Signal-style sender keys). Adding a third participant to a conversation's `participants` array will break decryption for everyone in it, not just the third person.
 - **No in-app contact discovery or conversation creation.** Deliberate scope boundary — see [Admin workflows](#admin-workflows-console-only).
+- **No real push notifications, on purpose.** The background message check is opportunistic only — iOS decides if and when it actually runs (commonly hours apart, and cancelled entirely if you force-quit the app from the app switcher). This is a deliberate tradeoff to avoid requiring a paid Apple Developer Program membership (Push Notifications is gated behind one) just to self-host your own instance.
 - **No video support yet.**
 - **No group chat.**
 - **iOS only, for now.** See below.
