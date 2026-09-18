@@ -12,6 +12,7 @@ struct ChatThreadView: View {
     @State private var isPaired = false
     @State private var showCamera = false
     @State private var showGallery = false
+    @State private var showFiles = false
     @State private var showMediaGrid = false
     @State private var noFaceModeEnabled = false
     @State private var browserURL: BrowserURL?
@@ -135,6 +136,11 @@ struct ChatThreadView: View {
                 } label: {
                     Image(systemName: "photo.on.rectangle")
                 }
+                Button {
+                    if isPaired { showFiles = true } else { showPairing = true }
+                } label: {
+                    Image(systemName: "folder")
+                }
                 TextField("Message", text: $draft, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...5)
@@ -232,6 +238,15 @@ struct ChatThreadView: View {
                     uploadMedia(data: data, type: type)
                 },
                 onCancel: { showGallery = false }
+            )
+        }
+        .sheet(isPresented: $showFiles) {
+            FilesPickerView(
+                onPick: { data, type in
+                    showFiles = false
+                    uploadMedia(data: data, type: type)
+                },
+                onCancel: { showFiles = false }
             )
         }
         .onAppear {

@@ -452,6 +452,14 @@ At the user's request: `ChatThreadView`'s compose bar shows a caption below it �
 
 Full suite still green (57/57). No Firebase deploy needed.
 
+### 2026-09-18 — Pick images/GIFs from Files, not just the Photos library
+
+At the user's request: a third compose-bar button (folder icon) opens a new `FilesPickerView`, wrapping `UIDocumentPickerViewController` — reaches iCloud Drive, "On My iPhone," and any other file provider, which `GalleryPickerView`'s `PHPickerViewController` can't (that only sees the Photos library). Restricted to `.image` content types (`.gif` already conforms to `.image`, so GIFs are still pickable) so non-image files never show up in the picker at all.
+
+The picked file's actual content type (`URLResourceValues.contentType`, falling back to a filename-extension guess) decides `.image` vs `.gif` — getting this wrong would be a real bug, not cosmetic: `MediaUploadService` branches on it to decide whether to JPEG-re-encode (which would destroy a GIF's animation) or just metadata-strip. Wraps the picked-file read in `startAccessingSecurityScopedResource()`/`stopAccessingSecurityScopedResource()`, required for documents outside the app's own sandbox (iCloud Drive, another provider) as opposed to a plain local file. Feeds into the exact same `uploadMedia(data:type:)` path as the camera and Photos pickers — no changes needed anywhere downstream.
+
+Full suite still green (57/57) — `FilesPickerView` is `UIViewControllerRepresentable`/delegate glue with no non-trivial pure logic, matching this project's established pattern of not unit-testing that layer (`GalleryPickerView`/`CameraCaptureView` aren't tested either). No Firebase deploy needed.
+
 ---
 
 ## Phase 11 — Hardening & QA

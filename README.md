@@ -34,7 +34,7 @@ This project is open source (MIT) for anyone who wants to run their own instance
 - Links in messages are tappable and open in a private in-app browser (`WKWebView` with a non-persistent data store) instead of Safari — cookies, cache, and history live only in memory for that one page view and are never written to disk or shared with the system's Safari history
 
 **Media**
-- Photo capture (camera) and picking (photo library), plus GIFs
+- Photo capture (camera) and picking (photo library or the Files app — iCloud Drive, "On My iPhone," any other file provider), plus GIFs
 - EXIF/GPS metadata stripped from every image before it ever leaves the device
 - Non-GIF images are downscaled to a 4K (3840px) long edge and normalized to JPEG @ 95% before encryption — aspect ratio preserved, never upscaled
 - Decrypted media renders from an app-private sandbox only — never the system Photos library, until the user explicitly shares/saves it
