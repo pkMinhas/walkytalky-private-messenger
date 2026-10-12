@@ -1,8 +1,28 @@
-# walkytalky
+<p align="center">
+  <img src="docs/app-icon.png" alt="walkytalky app icon" width="128" height="128">
+</p>
+
+# Walky Talky
 
 A self-hosted, end-to-end encrypted 1:1 chat app for iOS, built on Firebase (Auth, Firestore, Storage). No central operator reads your messages or media — encryption keys are derived on-device via an offline QR handshake and never leave the device.
 
 This project is open source (MIT) for anyone who wants to run their own instance. There is no shared/hosted "walkytalky service" — every deployer stands up their own Firebase project and owns their own data.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=uIOiFIBFjlQ">
+    <img src="https://img.youtube.com/vi/uIOiFIBFjlQ/maxresdefault.jpg" alt="Watch the walkytalky video on YouTube" width="600">
+  </a>
+</p>
+
+## Do you love this project? Sponsor it!
+
+Your sponsorship pays for WalkyTalky maintainence and for building new features.
+
+<p align="center">
+  <a href="https://ko-fi.com/pkminhas"><img src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
+  <a href="https://github.com/sponsors/pkminhas"><img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
+</p>
+
 
 ## Table of contents
 
