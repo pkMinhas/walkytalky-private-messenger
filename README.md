@@ -19,8 +19,8 @@ This project is open source (MIT) for anyone who wants to run their own instance
 Your sponsorship pays for WalkyTalky maintainence and for building new features.
 
 <p align="center">
-  <a href="https://ko-fi.com/pkminhas"><img src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
-  <a href="https://github.com/sponsors/pkminhas"><img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
+<a href="https://github.com/sponsors/pkminhas"><img src="https://img.shields.io/badge/Sponsor_on_GitHub-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white&style=for-the-badge" alt="Sponsor on GitHub"></a>
+  <a href="https://ko-fi.com/pkminhas"><img src="https://img.shields.io/badge/Support_on_Ko--fi-%E2%98%95-ff5e5b?logo=kofi&logoColor=white&style=for-the-badge" alt="Support on Ko-fi"></a>
 </p>
 
 
