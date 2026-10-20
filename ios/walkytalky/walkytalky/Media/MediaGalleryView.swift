@@ -220,6 +220,9 @@ struct MediaPagerView: View {
             }
         }
         .onAppear { refreshShareURL() }
+        // The share copy is plaintext outside MediaStorage's cache, so it
+        // only lives as long as the viewer that can share it.
+        .onDisappear { MediaStorage.deleteShareFiles() }
     }
 
     private var visibleIndices: [Int] {
@@ -275,10 +278,8 @@ struct MediaPagerView: View {
             return
         }
         let fileExtension = messages[currentIndex].type == .gif ? "gif" : "jpg"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("walkytalky-image.\(fileExtension)")
         do {
-            try data.write(to: url, options: .atomic)
-            shareURL = url
+            shareURL = try MediaStorage.writeShareFile(data, fileExtension: fileExtension)
         } catch {
             shareURL = nil
         }

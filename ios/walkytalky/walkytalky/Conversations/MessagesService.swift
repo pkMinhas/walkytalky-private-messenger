@@ -27,6 +27,16 @@ final class MessagesService: ObservableObject {
                 }
                 guard let snapshot else { return }
                 self.listenErrorMessage = nil
+                // The sender's device clears its own cached copy in
+                // deleteForEveryone; this clears the recipient's once the
+                // tombstone arrives. The first snapshot reports every doc as
+                // added, so tombstones received while the app was closed are
+                // covered too.
+                for change in snapshot.documentChanges where change.type != .removed {
+                    if change.document.data()["deletedForEveryone"] as? Bool == true {
+                        MediaStorage.delete(messageId: change.document.documentID)
+                    }
+                }
                 self.messages = snapshot.documents.compactMap { document in
                     do {
                         return try document.data(as: Message.self)
@@ -79,6 +89,8 @@ final class MessagesService: ObservableObject {
         try await ref.updateData([
             "deletedFor": FieldValue.arrayUnion([uid]),
         ])
+
+        MediaStorage.delete(messageId: messageId)
     }
 
     /// Marks a message as read by the caller — only ever adds the caller's

@@ -139,6 +139,10 @@ final class AuthService: ObservableObject {
             )
         }
         try? Auth.auth().signOut()
+        // The next sign-in is a brand-new anonymous identity, so nothing the
+        // old one could decrypt should survive into it.
+        MediaStorage.deleteAll()
+        ConversationKeyStore.deleteAll()
         authState = .signedOut
     }
 

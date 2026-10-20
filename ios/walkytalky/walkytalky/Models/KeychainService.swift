@@ -42,6 +42,27 @@ enum KeychainService {
         SecItemDelete(query as CFDictionary)
     }
 
+    /// Deletes every item in `service` whose account name starts with
+    /// `prefix`. Used for families of items keyed by id (e.g. per-conversation
+    /// keys) that have no fixed list of account names to delete one by one.
+    static func deleteAll(accountPrefix prefix: String, service: String = defaultService) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let items = result as? [[String: Any]]
+        else { return }
+
+        for item in items {
+            guard let account = item[kSecAttrAccount as String] as? String, account.hasPrefix(prefix) else { continue }
+            delete(account: account, service: service)
+        }
+    }
+
     static func saveString(_ string: String, account: String, service: String = defaultService) {
         save(Data(string.utf8), account: account, service: service)
     }

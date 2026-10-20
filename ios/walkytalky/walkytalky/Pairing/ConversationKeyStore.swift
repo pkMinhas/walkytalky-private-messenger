@@ -34,6 +34,13 @@ enum ConversationKeyStore {
         return key(conversationId: conversationId, keyVersion: version)
     }
 
+    /// Deletes every conversation's key material and version marker, so
+    /// nothing previously decrypted can be decrypted again on this device.
+    static func deleteAll() {
+        KeychainService.deleteAll(accountPrefix: "convKey_")
+        KeychainService.deleteAll(accountPrefix: "convKeyVersion_")
+    }
+
     /// Stores a freshly derived key as the new current version, discarding
     /// the previous version's key material (re-pair semantics).
     static func store(conversationId: String, keyVersion: Int, key: SymmetricKey) {
