@@ -28,6 +28,18 @@ final class ConversationsService: ObservableObject {
                 // the user is still a participant in it.
                 guard !snapshot.metadata.isFromCache else { return }
                 let activeIds = Set(snapshot.documents.map(\.documentID))
+
+                // Deleting the key is what actually makes any encrypted
+                // cache file left behind (e.g. one an in-flight download
+                // wrote after the folder was removed) unreadable. If the
+                // user is ever added back, they pair again.
+                let removedIds = ConversationKeyStore.storedConversationIds().subtracting(activeIds)
+                if !removedIds.isEmpty {
+                    for id in removedIds {
+                        ConversationKeyStore.delete(conversationId: id)
+                    }
+                    MediaMemoryCache.shared.removeAll()
+                }
                 Task.detached(priority: .utility) {
                     MediaStorage.deleteConversations(notIn: activeIds)
                 }

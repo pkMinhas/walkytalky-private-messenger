@@ -493,15 +493,11 @@ struct MediaStorageTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let kept = try makeConversationFolder("kept", in: root)
         let removed = try makeConversationFolder("removed", in: root)
-        let legacyFile = root.appendingPathComponent("legacy-message")
-        try Data("legacy".utf8).write(to: legacyFile)
 
         MediaStorage.deleteConversations(notIn: ["kept"], root: root)
 
         #expect(FileManager.default.fileExists(atPath: kept.path))
         #expect(FileManager.default.fileExists(atPath: removed.path) == false)
-        // Flat files are purgeLegacyFlatFiles' job, not this one's.
-        #expect(FileManager.default.fileExists(atPath: legacyFile.path))
     }
 
     @Test func emptyActiveSetDeletesEveryConversationFolder() throws {
@@ -516,16 +512,185 @@ struct MediaStorageTests {
         #expect(FileManager.default.fileExists(atPath: b.path) == false)
     }
 
-    @Test func purgesOnlyLegacyFlatFiles() throws {
+    @Test func deleteAllEmptiesTheRootButKeepsIt() throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
-        let folder = try makeConversationFolder("conv", in: root)
-        let legacyFile = root.appendingPathComponent("legacy-message")
-        try Data("legacy".utf8).write(to: legacyFile)
+        _ = try makeConversationFolder("a", in: root)
+        try Data("stray".utf8).write(to: root.appendingPathComponent("stray"))
 
-        MediaStorage.purgeLegacyFlatFiles(root: root)
+        MediaStorage.deleteAll(root: root)
 
-        #expect(FileManager.default.fileExists(atPath: legacyFile.path) == false)
-        #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent("message").path))
+        #expect(FileManager.default.fileExists(atPath: root.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test func removesLegacyPlaintextCacheAndShareCopies() throws {
+        let cachesRoot = try makeRoot()
+        let tmpRoot = try makeRoot()
+        defer {
+            try? FileManager.default.removeItem(at: cachesRoot)
+            try? FileManager.default.removeItem(at: tmpRoot)
+        }
+        let legacyDir = cachesRoot.appendingPathComponent("Media", isDirectory: true)
+        _ = try makeConversationFolder("conv", in: legacyDir)
+        try Data("flat".utf8).write(to: legacyDir.appendingPathComponent("flat-message"))
+        let encryptedDir = try makeConversationFolder("conv", in: cachesRoot.appendingPathComponent("EncryptedMedia"))
+        let shareJPG = tmpRoot.appendingPathComponent("walkytalky-image.jpg")
+        let shareGIF = tmpRoot.appendingPathComponent("walkytalky-image.gif")
+        try Data("jpg".utf8).write(to: shareJPG)
+        try Data("gif".utf8).write(to: shareGIF)
+
+        MediaStorage.removeLegacyPlaintextCache(cachesRoot: cachesRoot, tmpRoot: tmpRoot)
+
+        #expect(FileManager.default.fileExists(atPath: legacyDir.path) == false)
+        #expect(FileManager.default.fileExists(atPath: shareJPG.path) == false)
+        #expect(FileManager.default.fileExists(atPath: shareGIF.path) == false)
+        // The new encrypted cache is untouched.
+        #expect(FileManager.default.fileExists(atPath: encryptedDir.path))
+    }
+}
+
+struct MediaCachePurgePolicyTests {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func notExpiredBefore24Hours() {
+        let cachedAt = now.addingTimeInterval(-(24 * 60 * 60 - 1))
+        #expect(MediaCachePurgePolicy.isExpired(cachedAt: cachedAt, now: now) == false)
+    }
+
+    @Test func expiredAtExactly24Hours() {
+        let cachedAt = now.addingTimeInterval(-24 * 60 * 60)
+        #expect(MediaCachePurgePolicy.isExpired(cachedAt: cachedAt, now: now))
+    }
+
+    @Test func expiredWhenTheClockMovedBackwards() {
+        let cachedAt = now.addingTimeInterval(60)
+        #expect(MediaCachePurgePolicy.isExpired(cachedAt: cachedAt, now: now))
+    }
+
+    @Test func purgesOnlyFilesAtLeast24HoursOld() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent("purge-root-\(UUID().uuidString)", isDirectory: true)
+        let folder = root.appendingPathComponent("conv", isDirectory: true)
+        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: root) }
+
+        let old = folder.appendingPathComponent("old")
+        let fresh = folder.appendingPathComponent("fresh")
+        try Data("old".utf8).write(to: old)
+        try Data("fresh".utf8).write(to: fresh)
+        try fileManager.setAttributes([.modificationDate: now.addingTimeInterval(-25 * 60 * 60)], ofItemAtPath: old.path)
+        try fileManager.setAttributes([.modificationDate: now.addingTimeInterval(-23 * 60 * 60)], ofItemAtPath: fresh.path)
+
+        MediaCachePurgePolicy.purgeExpiredFiles(now: now, root: root)
+
+        #expect(fileManager.fileExists(atPath: old.path) == false)
+        #expect(fileManager.fileExists(atPath: fresh.path))
+        // The conversation folder itself stays.
+        #expect(fileManager.fileExists(atPath: folder.path))
+    }
+}
+
+struct MediaMemoryCacheTests {
+    @Test func storeReadRemove() {
+        let cache = MediaMemoryCache()
+        let data = Data("decrypted".utf8)
+
+        cache.store(data, messageId: "m", conversationId: "c")
+        #expect(cache.data(messageId: "m", conversationId: "c") == data)
+        // Same message id under another conversation is a different entry.
+        #expect(cache.data(messageId: "m", conversationId: "other") == nil)
+
+        cache.remove(messageId: "m", conversationId: "c")
+        #expect(cache.data(messageId: "m", conversationId: "c") == nil)
+    }
+
+    @Test func removeAllEmptiesTheCache() {
+        let cache = MediaMemoryCache()
+        cache.store(Data("a".utf8), messageId: "a", conversationId: "c")
+        cache.store(Data("b".utf8), messageId: "b", conversationId: "c")
+
+        cache.removeAll()
+
+        #expect(cache.data(messageId: "a", conversationId: "c") == nil)
+        #expect(cache.data(messageId: "b", conversationId: "c") == nil)
+    }
+}
+
+@MainActor
+@Suite(.serialized)
+struct MediaDecryptorCacheTests {
+    private func cleanUp(conversationId: String, messageId: String) {
+        KeychainService.delete(account: "convKeyVersion_\(conversationId)")
+        KeychainService.delete(account: "convKey_\(conversationId)_v1")
+        try? FileManager.default.removeItem(at: MediaStorage.conversationDirectory(conversationId))
+        MediaMemoryCache.shared.remove(messageId: messageId, conversationId: conversationId)
+    }
+
+    /// A message whose ciphertext is already in the encrypted disk cache,
+    /// with a storage path that would fail if it were ever downloaded.
+    private func makeCachedMessage(conversationId: String, messageId: String, plaintext: Data) throws -> Message {
+        let key = SymmetricKey(size: .bits256)
+        ConversationKeyStore.store(conversationId: conversationId, keyVersion: 1, key: key)
+        let encrypted = try MediaCrypto.encrypt(plaintext, key: key)
+        try MediaStorage.write(encrypted.uploadData, messageId: messageId, conversationId: conversationId)
+        return Message(
+            id: messageId,
+            senderId: "sender",
+            type: .image,
+            storagePath: "media/\(conversationId)/\(messageId)",
+            nonce: encrypted.nonceBase64,
+            keyVersion: 1
+        )
+    }
+
+    @Test func decryptsFromTheEncryptedDiskCacheIntoMemoryOnly() async throws {
+        let conversationId = "dec-cache-\(UUID().uuidString)"
+        let messageId = "msg-\(UUID().uuidString)"
+        defer { cleanUp(conversationId: conversationId, messageId: messageId) }
+        let plaintext = Data("plaintext media bytes".utf8)
+        let message = try makeCachedMessage(conversationId: conversationId, messageId: messageId, plaintext: plaintext)
+
+        let decrypted = await MediaDecryptor.decryptedData(for: message, conversationId: conversationId)
+
+        #expect(decrypted == plaintext)
+        #expect(MediaMemoryCache.shared.data(messageId: messageId, conversationId: conversationId) == plaintext)
+        // What's on disk is still the ciphertext, not what was just shown.
+        let onDisk = try #require(MediaStorage.read(messageId: messageId, conversationId: conversationId))
+        #expect(onDisk != plaintext)
+        #expect(onDisk.range(of: plaintext) == nil)
+    }
+
+    @Test func cachedCiphertextIsUselessOnceTheKeyIsGone() async throws {
+        let conversationId = "dec-nokey-\(UUID().uuidString)"
+        let messageId = "msg-\(UUID().uuidString)"
+        defer { cleanUp(conversationId: conversationId, messageId: messageId) }
+        let message = try makeCachedMessage(conversationId: conversationId, messageId: messageId, plaintext: Data("secret".utf8))
+
+        ConversationKeyStore.delete(conversationId: conversationId)
+
+        #expect(await MediaDecryptor.decryptedData(for: message, conversationId: conversationId) == nil)
+    }
+}
+
+@MainActor
+@Suite(.serialized)
+struct ConversationKeyStoreDeleteTests {
+    @Test func deletingOneConversationLeavesSimilarlyNamedOnesAlone() {
+        let base = "del-\(UUID().uuidString)"
+        let lookalike = "\(base)_v9"
+        defer {
+            ConversationKeyStore.delete(conversationId: base)
+            ConversationKeyStore.delete(conversationId: lookalike)
+        }
+        ConversationKeyStore.store(conversationId: base, keyVersion: 1, key: SymmetricKey(size: .bits256))
+        ConversationKeyStore.store(conversationId: lookalike, keyVersion: 1, key: SymmetricKey(size: .bits256))
+        #expect(ConversationKeyStore.storedConversationIds().isSuperset(of: [base, lookalike]))
+
+        ConversationKeyStore.delete(conversationId: base)
+
+        #expect(ConversationKeyStore.currentKey(conversationId: base) == nil)
+        #expect(ConversationKeyStore.storedConversationIds().contains(base) == false)
+        #expect(ConversationKeyStore.currentKey(conversationId: lookalike) != nil)
     }
 }

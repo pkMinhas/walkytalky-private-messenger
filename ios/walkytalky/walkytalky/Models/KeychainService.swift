@@ -42,10 +42,10 @@ enum KeychainService {
         SecItemDelete(query as CFDictionary)
     }
 
-    /// Deletes every item in `service` whose account name starts with
-    /// `prefix`. Used for families of items keyed by id (e.g. per-conversation
-    /// keys) that have no fixed list of account names to delete one by one.
-    static func deleteAll(accountPrefix prefix: String, service: String = defaultService) {
+    /// Account names of every item in `service` that start with `prefix`.
+    /// Used for families of items keyed by id (e.g. per-conversation keys)
+    /// that have no fixed list of account names.
+    static func accounts(withPrefix prefix: String, service: String = defaultService) -> [String] {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -55,10 +55,14 @@ enum KeychainService {
         var result: AnyObject?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
               let items = result as? [[String: Any]]
-        else { return }
+        else { return [] }
 
-        for item in items {
-            guard let account = item[kSecAttrAccount as String] as? String, account.hasPrefix(prefix) else { continue }
+        return items.compactMap { $0[kSecAttrAccount as String] as? String }.filter { $0.hasPrefix(prefix) }
+    }
+
+    /// Deletes every item in `service` whose account name starts with `prefix`.
+    static func deleteAll(accountPrefix prefix: String, service: String = defaultService) {
+        for account in accounts(withPrefix: prefix, service: service) {
             delete(account: account, service: service)
         }
     }

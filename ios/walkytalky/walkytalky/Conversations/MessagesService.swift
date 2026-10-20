@@ -35,6 +35,7 @@ final class MessagesService: ObservableObject {
                 for change in snapshot.documentChanges where change.type != .removed {
                     if change.document.data()["deletedForEveryone"] as? Bool == true {
                         MediaStorage.delete(messageId: change.document.documentID, conversationId: conversationId)
+                        MediaMemoryCache.shared.remove(messageId: change.document.documentID, conversationId: conversationId)
                     }
                 }
                 self.messages = snapshot.documents.compactMap { document in
@@ -91,6 +92,7 @@ final class MessagesService: ObservableObject {
         ])
 
         MediaStorage.delete(messageId: messageId, conversationId: conversationId)
+        MediaMemoryCache.shared.remove(messageId: messageId, conversationId: conversationId)
     }
 
     /// Marks a message as read by the caller — only ever adds the caller's
@@ -127,6 +129,7 @@ final class MessagesService: ObservableObject {
         ])
 
         MediaStorage.delete(messageId: messageId, conversationId: conversationId)
+        MediaMemoryCache.shared.remove(messageId: messageId, conversationId: conversationId)
     }
 
     deinit {

@@ -1,13 +1,15 @@
 import Foundation
 
-/// App-private (sandboxed) storage for media: plaintext captures pending
-/// encryption+upload, and decrypted files ready to render (Phase 6). Never
-/// the system Photos library — that only happens via explicit "Save to
-/// Gallery" (Phase 7).
+/// App-private (sandboxed) disk cache of media exactly as downloaded from
+/// Storage: still encrypted (`ciphertext || tag`), never plaintext. Decrypted
+/// bytes only ever live in `MediaMemoryCache`; `MediaDecryptor` decrypts from
+/// here on demand with the Keychain-resident conversation key, so a cached
+/// file is useless without that key and becomes unreadable the moment the
+/// key is deleted (re-pair, removal from the conversation, sign-out).
 ///
-/// Everything here is plaintext, so it's written with complete file
-/// protection: unreadable whenever the device is locked, not just before
-/// first unlock (the iOS default).
+/// Files are still written with complete file protection as defense in
+/// depth: unreadable whenever the device is locked, not just before first
+/// unlock (the iOS default).
 ///
 /// `nonisolated`: these are plain `FileManager` calls with no shared
 /// mutable state, and the project's `SWIFT_DEFAULT_ACTOR_ISOLATION =
@@ -17,20 +19,20 @@ import Foundation
 nonisolated enum MediaStorage {
     static let directory: URL = {
         let fileManager = FileManager.default
-        let url = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Media", isDirectory: true)
+        let url = cachesDirectory.appendingPathComponent("EncryptedMedia", isDirectory: true)
         try? fileManager.createDirectory(
             at: url,
             withIntermediateDirectories: true,
             attributes: [.protectionKey: FileProtectionType.complete]
         )
-        // createDirectory leaves an already-existing directory's attributes
-        // alone, so a directory created by an older build is upgraded here.
-        try? fileManager.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: url.path)
         return url
     }()
 
-    /// One folder per conversation (`Media/<conversationId>/<messageId>`),
+    private static var cachesDirectory: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+    }
+
+    /// One folder per conversation (`EncryptedMedia/<conversationId>/<messageId>`),
     /// so everything cached for a conversation can be removed in one go once
     /// this user is no longer in it. Firestore document ids can't contain
     /// "/" or be "." / "..", so an id is always a safe single path component.
@@ -82,61 +84,32 @@ nonisolated enum MediaStorage {
         }
     }
 
-    /// Builds before per-conversation folders cached files flat, as
-    /// `Media/<messageId>`, with nothing recording which conversation each
-    /// one came from, so they can never be matched to a removed
-    /// conversation. Since this is only a cache, they're deleted instead:
-    /// media for conversations the user is still in is re-downloaded and
-    /// re-decrypted into the new layout the next time it's viewed. Safe to
-    /// run every launch, since nothing writes flat files anymore.
-    static func purgeLegacyFlatFiles(root: URL = directory) {
+    /// Removes every cached file and conversation folder. The top-level
+    /// directory itself stays, since `directory` only creates it once.
+    static func deleteAll(root: URL = directory) {
         let fileManager = FileManager.default
-        guard let items = try? fileManager.contentsOfDirectory(
-            at: root,
-            includingPropertiesForKeys: [.isDirectoryKey]
-        ) else { return }
-
-        for item in items where !isDirectory(item) {
+        guard let items = try? fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return }
+        for item in items {
             try? fileManager.removeItem(at: item)
+        }
+    }
+
+    /// Builds before the encrypted cache kept *decrypted* media under
+    /// `Caches/Media` (flat `<messageId>` files, later per-conversation
+    /// folders). None of it is needed anymore and all of it is plaintext,
+    /// so the whole folder goes, along with the share copy those builds
+    /// left in `tmp`. Nothing is lost: it was only ever a cache, so media
+    /// is re-downloaded into the encrypted cache the next time it's viewed.
+    /// Safe to run every launch, since nothing writes there anymore.
+    static func removeLegacyPlaintextCache(cachesRoot: URL = cachesDirectory, tmpRoot: URL = FileManager.default.temporaryDirectory) {
+        let fileManager = FileManager.default
+        try? fileManager.removeItem(at: cachesRoot.appendingPathComponent("Media", isDirectory: true))
+        for fileExtension in ["jpg", "gif"] {
+            try? fileManager.removeItem(at: tmpRoot.appendingPathComponent("walkytalky-image.\(fileExtension)"))
         }
     }
 
     static func isDirectory(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
-    }
-
-    /// Removes every cached file and conversation folder (and any leftover
-    /// share copy). The top-level directory itself stays, since `directory`
-    /// only creates it once.
-    static func deleteAll() {
-        let fileManager = FileManager.default
-        if let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
-            for file in files {
-                try? fileManager.removeItem(at: file)
-            }
-        }
-        deleteShareFiles()
-    }
-
-    // MARK: - Share copy
-
-    /// The temp file handed to `ShareLink` by the media viewer, named
-    /// `walkytalky-image.<jpg|gif>` so the receiving app sees a real
-    /// filename and the original format.
-    static func shareFileURL(fileExtension: String) -> URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent("walkytalky-image.\(fileExtension)")
-    }
-
-    @discardableResult
-    static func writeShareFile(_ data: Data, fileExtension: String) throws -> URL {
-        let url = shareFileURL(fileExtension: fileExtension)
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
-        return url
-    }
-
-    static func deleteShareFiles() {
-        for fileExtension in ["jpg", "gif"] {
-            try? FileManager.default.removeItem(at: shareFileURL(fileExtension: fileExtension))
-        }
     }
 }

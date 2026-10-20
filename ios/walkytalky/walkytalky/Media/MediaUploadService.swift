@@ -77,6 +77,10 @@ final class MediaUploadService: ObservableObject {
             metadata.customMetadata = ["senderId": senderId]
 
             try await uploadWithProgress(data: encrypted.uploadData, metadata: metadata, to: storageRef)
+            // The sender already has the exact blob now in Storage, so it
+            // goes straight into the encrypted cache: no download of one's
+            // own photo just to display it.
+            _ = try? MediaStorage.write(encrypted.uploadData, messageId: messageId, conversationId: conversationId)
 
             try await messageRef.setData([
                 "senderId": senderId,

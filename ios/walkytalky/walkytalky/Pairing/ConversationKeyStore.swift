@@ -34,6 +34,28 @@ enum ConversationKeyStore {
         return key(conversationId: conversationId, keyVersion: version)
     }
 
+    /// Every conversation this device holds a key for, from the version
+    /// markers (one per paired conversation).
+    static func storedConversationIds() -> Set<String> {
+        let prefix = "convKeyVersion_"
+        return Set(KeychainService.accounts(withPrefix: prefix).map { String($0.dropFirst(prefix.count)) })
+    }
+
+    /// Deletes one conversation's key material (every version, in case an
+    /// older one was ever left behind) and its version marker.
+    static func delete(conversationId: String) {
+        // Exact match on "<prefix><digits>": a bare prefix match would also
+        // catch a conversation whose id merely starts with this one's plus
+        // "_v" (admin-chosen ids can contain underscores).
+        let prefix = "convKey_\(conversationId)_v"
+        for account in KeychainService.accounts(withPrefix: prefix) {
+            let version = account.dropFirst(prefix.count)
+            guard !version.isEmpty, version.allSatisfy(\.isNumber) else { continue }
+            KeychainService.delete(account: account)
+        }
+        KeychainService.delete(account: versionAccount(conversationId: conversationId))
+    }
+
     /// Deletes every conversation's key material and version marker, so
     /// nothing previously decrypted can be decrypted again on this device.
     static func deleteAll() {

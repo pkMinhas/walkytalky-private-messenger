@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Grid of every photo/GIF in a conversation, square-cropped thumbnails,
 /// opened from `ChatThreadView`'s toolbar. Tapping a thumbnail opens
@@ -131,14 +132,17 @@ struct MediaPagerView: View {
         messages[currentIndex].id.flatMap { loadedMedia[$0] }
     }
 
-    /// A file, named `walkytalky-image.<jpg|gif>`, holding the exact bytes
-    /// `MediaStorage` cached for the current message — shared via
-    /// `ShareLink(item:)` instead of `Image(uiImage:)`, which always
-    /// re-encodes to PNG regardless of the original format and carries no
-    /// filename of its own. Refreshed explicitly (see `refreshShareURL`)
-    /// rather than recomputed in `chrome`'s body, since that's re-evaluated
-    /// on every drag update — far too often to be writing files from.
-    @State private var shareURL: URL?
+    /// The exact decrypted bytes of every page loaded so far, keyed by
+    /// message id, for the share button. Taken from `MediaMemoryCache` as
+    /// each page finishes loading and held here, so sharing still works if
+    /// `NSCache` drops the entry under memory pressure while the viewer is
+    /// open. Never written to disk by the app; see `ShareableMedia`.
+    @State private var loadedData: [String: Data] = [:]
+
+    private var currentShareItem: ShareableMedia? {
+        guard let id = messages[currentIndex].id, let data = loadedData[id] else { return nil }
+        return ShareableMedia(data: data, isGIF: messages[currentIndex].type == .gif)
+    }
 
     /// Live drag translation. `.width` drives the page-turn (and, while
     /// zoomed, carries only the pan's "overdrag" past its bounds, so the
@@ -183,8 +187,8 @@ struct MediaPagerView: View {
                         onLoaded: { media in
                             if let id = messages[index].id, let media {
                                 loadedMedia[id] = media
+                                loadedData[id] = MediaMemoryCache.shared.data(messageId: id, conversationId: conversationId)
                             }
-                            refreshShareURL()
                         }
                     )
                     .frame(width: size.width, height: size.height)
@@ -219,10 +223,6 @@ struct MediaPagerView: View {
                 }
             }
         }
-        .onAppear { refreshShareURL() }
-        // The share copy is plaintext outside MediaStorage's cache, so it
-        // only lives as long as the viewer that can share it.
-        .onDisappear { MediaStorage.deleteShareFiles() }
     }
 
     private var visibleIndices: [Int] {
@@ -253,9 +253,9 @@ struct MediaPagerView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                if let shareURL, let currentMedia {
+                if let currentShareItem, let currentMedia {
                     ShareLink(
-                        item: shareURL,
+                        item: currentShareItem,
                         preview: SharePreview("walkytalky-image", image: Image(uiImage: currentMedia.primaryImage))
                     ) {
                         Image(systemName: "square.and.arrow.up.circle.fill")
@@ -266,22 +266,6 @@ struct MediaPagerView: View {
             }
             .padding()
             Spacer()
-        }
-    }
-
-    /// Rewrites the share temp file from whatever's currently cached on
-    /// disk for the current message — a no-op (leaves `shareURL` as-is
-    /// momentarily) if that message hasn't finished decrypting yet; the
-    /// `onLoaded` callback calls this again once it has.
-    private func refreshShareURL() {
-        guard let messageId = messages[currentIndex].id, let data = MediaStorage.read(messageId: messageId, conversationId: conversationId) else {
-            return
-        }
-        let fileExtension = messages[currentIndex].type == .gif ? "gif" : "jpg"
-        do {
-            shareURL = try MediaStorage.writeShareFile(data, fileExtension: fileExtension)
-        } catch {
-            shareURL = nil
         }
     }
 
@@ -358,7 +342,6 @@ struct MediaPagerView: View {
             dragTranslation = .zero
             resetZoom()
         }
-        refreshShareURL()
     }
 
     private func resetZoom() {
@@ -407,5 +390,29 @@ private struct MediaPagerPage: View {
             failed = decrypted == nil
             onLoaded(decrypted)
         }
+    }
+}
+
+/// What the pager's share button hands to `ShareLink`: decrypted bytes from
+/// memory, exported as their real type (JPEG or GIF) with a real filename.
+/// Sharing the bytes, rather than `Image(uiImage:)`, avoids re-encoding to
+/// PNG and keeps a GIF animated. The app never writes these bytes to a file
+/// itself; the system may, but only for the share the user chose (AirDrop,
+/// Save to Files, etc.).
+///
+/// `nonisolated`: `Transferable`'s requirements are nonisolated, and the
+/// project's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` setting would
+/// otherwise pin this type to the main actor.
+nonisolated struct ShareableMedia: Transferable {
+    let data: Data
+    let isGIF: Bool
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .gif) { $0.data }
+            .exportingCondition { $0.isGIF }
+            .suggestedFileName("walkytalky-image.gif")
+        DataRepresentation(exportedContentType: .jpeg) { $0.data }
+            .exportingCondition { !$0.isGIF }
+            .suggestedFileName("walkytalky-image.jpg")
     }
 }

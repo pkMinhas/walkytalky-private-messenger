@@ -111,6 +111,9 @@ struct PairingView: View {
         do {
             let key = try PairingService.deriveKey(peerPublicKeyData: payload.publicKey, conversationId: conversationId)
             ConversationKeyStore.store(conversationId: conversationId, keyVersion: nextVersion, key: key)
+            // The old key is gone, so media decrypted under it must stop
+            // showing too, not linger in memory until the app backgrounds.
+            MediaMemoryCache.shared.removeAll()
             errorMessage = nil
             didPair = true
         } catch {
