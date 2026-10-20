@@ -59,6 +59,7 @@ Your sponsorship pays for WalkyTalky maintainence and for building new features.
 - EXIF/GPS metadata stripped from every image before it ever leaves the device
 - Non-GIF images are downscaled to a 4K (3840px) long edge and normalized to JPEG @ 95% before encryption — aspect ratio preserved, never upscaled
 - Decrypted media renders from an app-private sandbox only — never the system Photos library, until the user explicitly shares/saves it
+- Decrypted media is cached per conversation. If a user is removed from a conversation, or the conversation is deleted on the server, all of that conversation's cached media is deleted from their device once the app next gets the conversation list from the server (immediately if it's open and online, otherwise on the next launch with a connection)
 - Fullscreen viewer: pinch-to-zoom, drag-to-pan, and a Share button (system share sheet — AirDrop, Messages, Save Image, etc.)
 - Media gallery: a grid of square thumbnails for every photo/GIF in a conversation (toolbar button in the thread view), with a paged swipe viewer to move between them
 - "No Face" mode: an optional per-conversation toggle (toolbar button) that runs on-device face detection (Vision) and blurs every detected face in a photo/GIF before it's encrypted and sent. Purely local to the device that enables it — not synced to Firestore, not visible to the other participant, has no effect on media they send. Fails closed: if blurring itself fails while the mode is on, the send is aborted rather than uploading an unprotected original

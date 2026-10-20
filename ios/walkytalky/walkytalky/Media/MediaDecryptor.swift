@@ -9,7 +9,7 @@ enum MediaDecryptor {
     static func decryptedMedia(for message: Message, conversationId: String) async -> DecodedMedia? {
         guard let messageId = message.id else { return nil }
 
-        if let cached = MediaStorage.read(messageId: messageId), let media = decode(cached, type: message.type) {
+        if let cached = MediaStorage.read(messageId: messageId, conversationId: conversationId), let media = decode(cached, type: message.type) {
             return media
         }
 
@@ -25,7 +25,7 @@ enum MediaDecryptor {
             let ref = Storage.storage().reference(withPath: storagePath)
             let downloaded = try await ref.data(maxSize: 25 * 1024 * 1024)
             let decrypted = try MediaCrypto.decrypt(downloaded, nonceBase64: nonce, key: key)
-            try MediaStorage.write(decrypted, messageId: messageId)
+            try MediaStorage.write(decrypted, messageId: messageId, conversationId: conversationId)
             return decode(decrypted, type: message.type)
         } catch {
             return nil

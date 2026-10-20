@@ -36,6 +36,7 @@ struct walkytalkyApp: App {
                 .environmentObject(directory)
                 .environmentObject(lastMessages)
                 .task {
+                    MediaStorage.purgeLegacyFlatFiles()
                     MediaCacheRetentionPolicy.evictExpiredFiles()
                 }
         }

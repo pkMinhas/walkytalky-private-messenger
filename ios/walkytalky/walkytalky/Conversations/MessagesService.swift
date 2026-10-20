@@ -34,7 +34,7 @@ final class MessagesService: ObservableObject {
                 // covered too.
                 for change in snapshot.documentChanges where change.type != .removed {
                     if change.document.data()["deletedForEveryone"] as? Bool == true {
-                        MediaStorage.delete(messageId: change.document.documentID)
+                        MediaStorage.delete(messageId: change.document.documentID, conversationId: conversationId)
                     }
                 }
                 self.messages = snapshot.documents.compactMap { document in
@@ -90,7 +90,7 @@ final class MessagesService: ObservableObject {
             "deletedFor": FieldValue.arrayUnion([uid]),
         ])
 
-        MediaStorage.delete(messageId: messageId)
+        MediaStorage.delete(messageId: messageId, conversationId: conversationId)
     }
 
     /// Marks a message as read by the caller — only ever adds the caller's
@@ -126,7 +126,7 @@ final class MessagesService: ObservableObject {
             "deletedAt": FieldValue.serverTimestamp(),
         ])
 
-        MediaStorage.delete(messageId: messageId)
+        MediaStorage.delete(messageId: messageId, conversationId: conversationId)
     }
 
     deinit {

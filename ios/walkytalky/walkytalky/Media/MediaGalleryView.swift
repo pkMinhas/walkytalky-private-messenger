@@ -274,7 +274,7 @@ struct MediaPagerView: View {
     /// momentarily) if that message hasn't finished decrypting yet; the
     /// `onLoaded` callback calls this again once it has.
     private func refreshShareURL() {
-        guard let messageId = messages[currentIndex].id, let data = MediaStorage.read(messageId: messageId) else {
+        guard let messageId = messages[currentIndex].id, let data = MediaStorage.read(messageId: messageId, conversationId: conversationId) else {
             return
         }
         let fileExtension = messages[currentIndex].type == .gif ? "gif" : "jpg"

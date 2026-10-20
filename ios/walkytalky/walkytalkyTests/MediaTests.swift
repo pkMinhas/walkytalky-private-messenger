@@ -457,15 +457,75 @@ struct ZoomPanMathTests {
 @MainActor
 struct MediaStorageTests {
     @Test func writeReadDeleteRoundTrips() throws {
+        let conversationId = "test-conv-\(UUID().uuidString)"
         let messageId = "test-\(UUID().uuidString)"
         let data = Data("plaintext media bytes".utf8)
+        defer { try? FileManager.default.removeItem(at: MediaStorage.conversationDirectory(conversationId)) }
 
-        #expect(MediaStorage.exists(messageId: messageId) == false)
-        try MediaStorage.write(data, messageId: messageId)
-        #expect(MediaStorage.exists(messageId: messageId))
-        #expect(MediaStorage.read(messageId: messageId) == data)
+        #expect(MediaStorage.exists(messageId: messageId, conversationId: conversationId) == false)
+        try MediaStorage.write(data, messageId: messageId, conversationId: conversationId)
+        #expect(MediaStorage.exists(messageId: messageId, conversationId: conversationId))
+        #expect(MediaStorage.read(messageId: messageId, conversationId: conversationId) == data)
+        #expect(MediaStorage.fileURL(for: messageId, conversationId: conversationId).deletingLastPathComponent().lastPathComponent == conversationId)
 
-        MediaStorage.delete(messageId: messageId)
-        #expect(MediaStorage.exists(messageId: messageId) == false)
+        MediaStorage.delete(messageId: messageId, conversationId: conversationId)
+        #expect(MediaStorage.exists(messageId: messageId, conversationId: conversationId) == false)
+    }
+
+    /// A scratch stand-in for `MediaStorage.directory`, so bulk deletes
+    /// can't touch files other tests are using in the real one.
+    private func makeRoot() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("media-root-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+
+    private func makeConversationFolder(_ id: String, in root: URL) throws -> URL {
+        let folder = root.appendingPathComponent(id, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("media".utf8).write(to: folder.appendingPathComponent("message"))
+        return folder
+    }
+
+    @Test func deletesFoldersOfConversationsNoLongerActive() throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let kept = try makeConversationFolder("kept", in: root)
+        let removed = try makeConversationFolder("removed", in: root)
+        let legacyFile = root.appendingPathComponent("legacy-message")
+        try Data("legacy".utf8).write(to: legacyFile)
+
+        MediaStorage.deleteConversations(notIn: ["kept"], root: root)
+
+        #expect(FileManager.default.fileExists(atPath: kept.path))
+        #expect(FileManager.default.fileExists(atPath: removed.path) == false)
+        // Flat files are purgeLegacyFlatFiles' job, not this one's.
+        #expect(FileManager.default.fileExists(atPath: legacyFile.path))
+    }
+
+    @Test func emptyActiveSetDeletesEveryConversationFolder() throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let a = try makeConversationFolder("a", in: root)
+        let b = try makeConversationFolder("b", in: root)
+
+        MediaStorage.deleteConversations(notIn: [], root: root)
+
+        #expect(FileManager.default.fileExists(atPath: a.path) == false)
+        #expect(FileManager.default.fileExists(atPath: b.path) == false)
+    }
+
+    @Test func purgesOnlyLegacyFlatFiles() throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let folder = try makeConversationFolder("conv", in: root)
+        let legacyFile = root.appendingPathComponent("legacy-message")
+        try Data("legacy".utf8).write(to: legacyFile)
+
+        MediaStorage.purgeLegacyFlatFiles(root: root)
+
+        #expect(FileManager.default.fileExists(atPath: legacyFile.path) == false)
+        #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent("message").path))
     }
 }
