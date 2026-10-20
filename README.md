@@ -89,7 +89,7 @@ Self-hosting means standing up your own Firebase project — there's no separate
 
 ### Prerequisites
 
-- A Mac with Xcode 26.6+ (project targets iOS 26.5; lower it in the Xcode project settings if you need to support older devices, but this hasn't been tested below that)
+- A Mac with Xcode 26.6+ (project targets iOS 26.0; lower it in the Xcode project settings if you need to support older devices, but this hasn't been tested below that)
 - An Apple ID (free tier is enough to build and run on your own devices/simulator; a paid Apple Developer Program membership is only needed for TestFlight/App Store distribution)
 - A Google account, for Firebase
 - [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`)
