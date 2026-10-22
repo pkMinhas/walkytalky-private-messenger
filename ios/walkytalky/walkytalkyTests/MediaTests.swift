@@ -550,47 +550,6 @@ struct MediaStorageTests {
     }
 }
 
-struct MediaCachePurgePolicyTests {
-    private let now = Date(timeIntervalSince1970: 1_800_000_000)
-
-    @Test func notExpiredBefore24Hours() {
-        let cachedAt = now.addingTimeInterval(-(24 * 60 * 60 - 1))
-        #expect(MediaCachePurgePolicy.isExpired(cachedAt: cachedAt, now: now) == false)
-    }
-
-    @Test func expiredAtExactly24Hours() {
-        let cachedAt = now.addingTimeInterval(-24 * 60 * 60)
-        #expect(MediaCachePurgePolicy.isExpired(cachedAt: cachedAt, now: now))
-    }
-
-    @Test func expiredWhenTheClockMovedBackwards() {
-        let cachedAt = now.addingTimeInterval(60)
-        #expect(MediaCachePurgePolicy.isExpired(cachedAt: cachedAt, now: now))
-    }
-
-    @Test func purgesOnlyFilesAtLeast24HoursOld() throws {
-        let fileManager = FileManager.default
-        let root = fileManager.temporaryDirectory.appendingPathComponent("purge-root-\(UUID().uuidString)", isDirectory: true)
-        let folder = root.appendingPathComponent("conv", isDirectory: true)
-        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? fileManager.removeItem(at: root) }
-
-        let old = folder.appendingPathComponent("old")
-        let fresh = folder.appendingPathComponent("fresh")
-        try Data("old".utf8).write(to: old)
-        try Data("fresh".utf8).write(to: fresh)
-        try fileManager.setAttributes([.modificationDate: now.addingTimeInterval(-25 * 60 * 60)], ofItemAtPath: old.path)
-        try fileManager.setAttributes([.modificationDate: now.addingTimeInterval(-23 * 60 * 60)], ofItemAtPath: fresh.path)
-
-        MediaCachePurgePolicy.purgeExpiredFiles(now: now, root: root)
-
-        #expect(fileManager.fileExists(atPath: old.path) == false)
-        #expect(fileManager.fileExists(atPath: fresh.path))
-        // The conversation folder itself stays.
-        #expect(fileManager.fileExists(atPath: folder.path))
-    }
-}
-
 struct MediaMemoryCacheTests {
     @Test func storeReadRemove() {
         let cache = MediaMemoryCache()

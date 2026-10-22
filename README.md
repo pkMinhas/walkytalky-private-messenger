@@ -60,7 +60,6 @@ Your sponsorship pays for WalkyTalky maintainence and for building new features.
 - Non-GIF images are downscaled to a 4K (3840px) long edge and normalized to JPEG @ 95% before encryption — aspect ratio preserved, never upscaled
 - Decrypted media renders from an app-private sandbox only — never the system Photos library, until the user explicitly shares/saves it
 - Media is cached on disk only in its original encrypted form, per conversation. It's decrypted on demand when displayed or shared, and the decrypted bytes are kept in memory only, never written to disk by the app. The in-memory copy is cleared whenever the app goes to the background
-- Each file in the encrypted disk cache is deleted once it's 24 hours old (checked at launch and whenever the app comes to the foreground); anything still needed is re-downloaded the next time it's viewed
 - If a user is removed from a conversation, or the conversation is deleted on the server, that conversation's cached media and its encryption key are deleted from their device once the app next gets the conversation list from the server (immediately if it's open and online, otherwise on the next launch with a connection). Being added back requires pairing again
 - Fullscreen viewer: pinch-to-zoom, drag-to-pan, and a Share button (system share sheet — AirDrop, Messages, Save Image, etc.)
 - Media gallery: a grid of square thumbnails for every photo/GIF in a conversation (toolbar button in the thread view), with a paged swipe viewer to move between them

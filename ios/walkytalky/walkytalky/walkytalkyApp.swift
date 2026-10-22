@@ -37,20 +37,15 @@ struct walkytalkyApp: App {
                 .environmentObject(lastMessages)
                 .task {
                     MediaStorage.removeLegacyPlaintextCache()
-                    MediaCachePurgePolicy.purgeExpiredFiles()
+                    MediaCacheRetentionPolicy.evictExpiredFiles()
                 }
         }
         .onChange(of: scenePhase) { _, newPhase in
             passcodeService.handleScenePhaseChange(newPhase)
-            switch newPhase {
-            case .background:
+            if newPhase == .background {
                 // The app locks here too, so decrypted media only ever sits
                 // in memory while the app is unlocked and in use.
                 MediaMemoryCache.shared.removeAll()
-            case .active:
-                MediaCachePurgePolicy.purgeExpiredFiles()
-            default:
-                break
             }
         }
     }
